@@ -26,3 +26,15 @@
 *.exe
 *.out
 *.app
+
+# Visual Studio
+Debug
+Release
+ipch
+*.sdf
+*.opensdf
+*.suo
+*.user
+
+# Others
+*.png
