@@ -43,6 +43,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\opencv\build\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\opencv\build\x86\vc10\lib;$(LibraryPath)</LibraryPath>
+    <TargetName>cbf</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
