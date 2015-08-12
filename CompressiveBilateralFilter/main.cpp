@@ -26,6 +26,8 @@
 #define atE(x) (w-1-std::abs(w-1-(x)))
 #define atS(y) (h-1-std::abs(h-1-(y)))
 
+const int tone=255; // maximum value of 8-bits dynamic range, ie [0,255]
+
 void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double>& dst,double ss,double sr)
 {
 	assert(src.size()==dst.size());
@@ -37,41 +39,56 @@ void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double
 
 	// generating spatial kernel
 	int r=int(ceil(3.0*ss));
-	cv::Mat_<double> kernel(1+r,1+r);
-	double eta=0.0;
+	cv::Mat_<double> kernelS(1+r,1+r);
 	for(int v=0;v<=r;++v)
 	for(int u=0;u<=r;++u)
-	{
-		double weight=exp(-(u*u+v*v)/(2.0*ss*ss));
-		if(u==0) weight*=0.5;
-		if(v==0) weight*=0.5;
-		eta+=4.0*weight;
-		kernel(v,u)=weight;
-	}
-	kernel/=eta; // normalization
+		kernelS(v,u)=exp(-(u*u+v*v)/(2.0*ss*ss));
+	
+	// generating range kernel (discretized for fast computation)
+	std::vector<double> kernelR(tone+1);
+	const double gamma=1.0/(2.0*sr*sr);
+	for(int t=0;t<=tone;++t)
+		kernelR[t]=exp(-gamma*t*t/(tone*tone));
 
 	// filtering
-	const double gamma=1.0/(2.0*sr*sr);
 	for(int y=0;y<h;++y)
 	for(int x=0;x<w;++x)
 	{
-		const double p=src(y,x);
-		double numer=0.0;
-		double denom=0.0;
-		for(int v=0;v<=r;++v)
-		for(int u=0;u<=r;++u)
-		{
-			const double p00=src(atN(y-v),atW(x-u));
-			const double p01=src(atS(y+v),atW(x-u));
-			const double p10=src(atN(y-v),atE(x+u));
-			const double p11=src(atS(y+v),atE(x+u));
-			const double wr00=exp(-gamma*(p00-p)*(p00-p));
-			const double wr01=exp(-gamma*(p01-p)*(p01-p));
-			const double wr10=exp(-gamma*(p10-p)*(p10-p));
-			const double wr11=exp(-gamma*(p11-p)*(p11-p));
+		double p=src(y,x);
 
-			numer+=kernel(v,u)*(wr00+wr01+wr10+wr11);
-			denom+=kernel(v,u)*(wr00*p00+wr01*p01+wr10*p10+wr11*p11);
+		double numer=1.0;
+		double denom=p;
+		for(int u=1;u<=r;++u)
+		{
+			double p0=src(y,atW(x-u));
+			double p1=src(y,atE(x+u));
+			double wr0=kernelR[abs(int(tone*(p0-p)))];
+			double wr1=kernelR[abs(int(tone*(p1-p)))];
+			numer+=kernelS(0,u)*(wr0   +wr1   );
+			denom+=kernelS(0,u)*(wr0*p0+wr1*p1);
+		}
+		for(int v=1;v<=r;++v)
+		{
+			double p0=src(atN(y-v),x);
+			double p1=src(atS(y+v),x);
+			double wr0=kernelR[abs(int(tone*(p0-p)))];
+			double wr1=kernelR[abs(int(tone*(p1-p)))];
+			numer+=kernelS(v,0)*(wr0   +wr1   );
+			denom+=kernelS(v,0)*(wr0*p0+wr1*p1);
+		}
+		for(int v=1;v<=r;++v)
+		for(int u=1;u<=r;++u)
+		{
+			double p00=src(atN(y-v),atW(x-u));
+			double p01=src(atS(y+v),atW(x-u));
+			double p10=src(atN(y-v),atE(x+u));
+			double p11=src(atS(y+v),atE(x+u));
+			double wr00=kernelR[abs(int(tone*(p00-p)))];
+			double wr01=kernelR[abs(int(tone*(p01-p)))];
+			double wr10=kernelR[abs(int(tone*(p10-p)))];
+			double wr11=kernelR[abs(int(tone*(p11-p)))];
+			numer+=kernelS(v,u)*(wr00    +wr01    +wr10    +wr11    );
+			denom+=kernelS(v,u)*(wr00*p00+wr01*p01+wr10*p10+wr11*p11);
 		}
 		dst(y,x)=denom/numer;
 	}
@@ -99,26 +116,25 @@ int main(int argc,char** argv)
 		return 1;
 	}
 
-	cv::Mat_<double> image=image0/255.0;
-
+	cv::Mat_<double> image=image0/double(tone); // dynamic range is transformed to [0,1]
+	cv::Mat_<double> dst0(image.size());
 	cv::Mat_<double> dst1(image.size());
 
 	double ss=2.0;
 	double sr=0.1;
+	std::cerr<<cv::format("[ss=%f sr=%f]",ss,sr)<<std::endl;
 
 	cv::TickMeter tm;
-	tm.reset();
+	
 	tm.start();
-	apply_bilateral_filter_original(image,dst1,ss,sr);
+	apply_bilateral_filter_original(image,dst0,ss,sr);
 	tm.stop();
-
-	std::cerr<<cv::format("ss=%f sr=%f :  ",ss,sr)<<std::endl;
 	std::cerr<<cv::format("%7.1f [ms]",tm.getTimeMilli())<<std::endl;
-	std::cerr<<std::endl;
+	tm.reset();
 
-	cv::imwrite(pathO,dst1*255.0);
+	//cv::imwrite(pathO,dst1*tone); // dynamic range is transformed back to [0,tone]
 	//cv::imshow("src",image);
-	//cv::imshow("dst1",dst1);
-	//cv::waitKey();
+	cv::imshow("dst0",dst0);
+	cv::waitKey();
 	return 0;
 }
