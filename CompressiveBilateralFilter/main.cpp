@@ -27,7 +27,7 @@ const double ss=2.0;
 const double sr=0.1;
 const double tau=0.1; // for compressive BF
 
-const bool sw_display_results=false;
+const bool sw_display_results=true;
 
 template<typename T>
 double calc_snr(const cv::Mat_<T>& image1,const cv::Mat_<T>& image2,T minval,T maxval)
