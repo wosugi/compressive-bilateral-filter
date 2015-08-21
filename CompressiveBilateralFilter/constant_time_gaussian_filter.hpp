@@ -1,3 +1,8 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2015 Kenjiro Sugimoto
+// Released under the MIT license
+// http://opensource.org/licenses/mit-license.php
+////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #define _USE_MATH_DEFINES
 #include <iostream>
@@ -7,6 +12,8 @@
 #include <cassert>
 #include <cmath>
 #include <opencv2/opencv.hpp>
+
+//==================================================================================================
 
 /// CB|ABCDE|DC (cv::BORDER_REFLECT_101)
 #define atW(x) (std::abs(x))
@@ -43,23 +50,23 @@ static inline std::vector<double> build_lookup_table(int r,std::vector<double>& 
 	return table;
 }
 
-//////////////////////////////////////
+//==================================================================================================
 
 template <typename T,int CH,int K>
-inline void filter_gauss_x(int w,int h,T* src,T* dst,double s)
+static inline void apply_spatial_gauss_x(int w,int h,T* src,T* dst,double s)
 {
 	throw std::invalid_argument("Unsupported parameters!");
 }
 template <typename T,int CH,int K>
-inline void filter_gauss_y(int w,int h,T* src,T* dst,double s)
+static inline void apply_spatial_gauss_y(int w,int h,T* src,T* dst,double s)
 {
 	throw std::invalid_argument("Unsupported parameters!");
 }
 
-//////////////////////////////////////
+//--------------------------------------------------------------------------------------------------
 
 template<>
-inline void filter_gauss_x<double,4,2>(int w,int h,double* src,double* dst,double s)
+static inline void apply_spatial_gauss_x<double,4,2>(int w,int h,double* src,double* dst,double s)
 {
 	const int CH=4,K=2;
 	
@@ -146,8 +153,11 @@ inline void filter_gauss_x<double,4,2>(int w,int h,double* src,double* dst,doubl
 		}
 	}
 }
+
+//--------------------------------------------------------------------------------------------------
+
 template<>
-inline void filter_gauss_y<double,4,2>(int w,int h,double* src,double* dst,double s)
+static inline void apply_spatial_gauss_y<double,4,2>(int w,int h,double* src,double* dst,double s)
 {
 	const int CH=4,K=2;
 
@@ -240,10 +250,10 @@ inline void filter_gauss_y<double,4,2>(int w,int h,double* src,double* dst,doubl
 	}
 }
 
-//////////////////////////////////////
+//==================================================================================================
 
 template <typename T,int CH,int K>
-void filter_gauss(int w,int h,T* src,T* dst,double sx,double sy)
+void apply_spatial_gauss(int w,int h,T* src,T* dst,double sx,double sy)
 {
 	if(w<=4.0*sx || h<=4.0*sy)
 		throw std::invalid_argument("\'sx\' and \'sy\' should be less than about w/4 or h/4!");
@@ -252,20 +262,18 @@ void filter_gauss(int w,int h,T* src,T* dst,double sx,double sy)
 	if(sx==0.0 && sy==0.0)
 		return;
 	else if(sx==0.0)
-		filter_gauss_y<T,CH,K>(w,h,src,dst,sy);
+		apply_spatial_gauss_y<T,CH,K>(w,h,src,dst,sy);
 	else if(sy==0.0)
-		filter_gauss_x<T,CH,K>(w,h,src,dst,sx);
+		apply_spatial_gauss_x<T,CH,K>(w,h,src,dst,sx);
 	else
 	{
-		filter_gauss_y<T,CH,K>(w,h,src,dst,sy);
-		filter_gauss_x<T,CH,K>(w,h,dst,dst,sx); // only filter_gauss_x() allows in-place filtering.
+		apply_spatial_gauss_y<T,CH,K>(w,h,src,dst,sy);
+		apply_spatial_gauss_x<T,CH,K>(w,h,dst,dst,sx); // only filter_gauss_x() allows in-place filtering.
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
 // OpenCV2 interface for easy function call
-void filter_gauss(const cv::Mat& src,cv::Mat& dst,double sx,double sy)
+void apply_spatial_gauss(const cv::Mat& src,cv::Mat& dst,double sx,double sy)
 {
 	// checking the format of input/output images
 	if(src.size()!=dst.size())
@@ -277,14 +285,14 @@ void filter_gauss(const cv::Mat& src,cv::Mat& dst,double sx,double sy)
 
 	switch(src.type())
 	{
-//	case CV_32FC1: filter_gauss< float,1,2>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data),sx,sy); break;
-//	case CV_32FC4: filter_gauss< float,4,2>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data),sx,sy); break;
-//	case CV_64FC1: filter_gauss<double,1,2>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data),sx,sy); break;
-	case CV_64FC4: filter_gauss<double,4,2>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data),sx,sy); break;
+//	case CV_32FC1: apply_spatial_gauss< float,1,2>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data),sx,sy); break;
+//	case CV_32FC4: apply_spatial_gauss< float,4,2>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data),sx,sy); break;
+//	case CV_64FC1: apply_spatial_gauss<double,1,2>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data),sx,sy); break;
+	case CV_64FC4: apply_spatial_gauss<double,4,2>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data),sx,sy); break;
 	default:
 		throw std::invalid_argument("Unsupported element type or channel!");
 		break;
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//==================================================================================================

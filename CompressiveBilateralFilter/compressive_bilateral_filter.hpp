@@ -1,3 +1,8 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2015 Kenjiro Sugimoto
+// Released under the MIT license
+// http://opensource.org/licenses/mit-license.php
+////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #define _USE_MATH_DEFINES
 #include <iostream>
@@ -8,6 +13,8 @@
 #include <opencv2/opencv.hpp>
 #include <boost/math/special_functions/erf.hpp>
 #include "constant_time_gaussian_filter.hpp"
+
+//==================================================================================================
 
 // a scale-adjusted derivative of the estimated kernel error E(T)
 class derivative_estimated_kernel_error
@@ -98,7 +105,7 @@ void apply_bilateral_filter_compressive(const cv::Mat_<double>& src,cv::Mat_<dou
 			double sp=tblS[p];
 			comps(y,x)=cv::Vec4d(cp*src(y,x),sp*src(y,x),cp,sp);
 		}
-		filter_gauss(comps,comps,ss,ss);
+		apply_spatial_gauss(comps,comps,ss,ss);
 		
 		// decompressing k-th components
 		for(int y=0;y<src.rows;++y)
@@ -114,3 +121,5 @@ void apply_bilateral_filter_compressive(const cv::Mat_<double>& src,cv::Mat_<dou
 	}
 	dst=numer/denom;
 }
+
+//==================================================================================================
