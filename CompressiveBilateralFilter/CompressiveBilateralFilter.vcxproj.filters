@@ -26,8 +26,5 @@
     <ClInclude Include="compressive_bilateral_filter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="constant_time_gaussian_filter.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
