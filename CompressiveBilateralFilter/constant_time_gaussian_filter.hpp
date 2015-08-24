@@ -13,24 +13,55 @@
 #include <cmath>
 #include <opencv2/opencv.hpp>
 
-//==================================================================================================
-
 /// CB|ABCDE|DC (cv::BORDER_REFLECT_101)
 #define atW(x) (std::abs(x))
 #define atN(y) (std::abs(y))
 #define atE(x) (w-1-std::abs(w-1-(x)))
 #define atS(y) (h-1-std::abs(h-1-(y)))
 
+//==================================================================================================
+
+// a scale-adjusted derivative of the estimated Gaussian spatial kernel error
+class derivative_estimated_gaussian_spatial_kernel_error
+{
+private:
+	double s;
+	int K;
+public:
+	derivative_estimated_gaussian_spatial_kernel_error(double s,int K):s(s),K(K){}
+public:
+	double operator()(int r)
+	{
+		double phi=(2*r+1)/(2.0*s); // spatial domain
+		double psi=M_PI*s*(2*K+1)/(2*r+1); // spectral domain
+		return psi*exp(-psi*psi)-phi*exp(-phi*phi);
+	}
+};
+
+// solve df(x)==0 by binary search for integer x=[x1,x2)
+template<class Functor>
+inline int solve_by_bs(Functor df,int x1,int x2)
+{
+	while(1<x2-x1)
+	{
+		int x=(x1+x2)/2;
+		((0.0<df(x))?x2:x1)=x;
+	}
+	return (abs(df(x1))<=abs(df(x2)))?x1:x2;
+}
+
+static inline int estimate_optimal_radius(double s,int K)
+{
+	derivative_estimated_gaussian_spatial_kernel_error df(s,K);
+	int r=solve_by_bs(df,int(2.0*s),int(4.0*s));
+	return r;
+}
+
 static inline double phase(int r)
 {
-	return 2.0*M_PI/(r+1+r); // the unit phase step for DCT/DST-5
+	return 2.0*M_PI/(2*r+1); // the unit phase step for DCT/DST-5
 }
-// temporal algorithm
-static inline int estimate_radius(double s)
-{
-	//return (s<4.0) ? int(3.3333*s-0.3333+0.5) : int(3.4113*s-0.6452+0.5); //K==3
-	return (s<4.0) ? int(3.0000*s-0.2000+0.5) : int(3.0000*s+0.5); //K==2
-}
+
 static inline std::vector<double> gen_spectrum(int K,double s,int r)
 {
 	const double omega=phase(r);
@@ -70,7 +101,7 @@ static inline void apply_spatial_gauss_x<double,4,2>(int w,int h,double* src,dou
 {
 	const int CH=4,K=2;
 	
-	const int r=estimate_radius(s);
+	const int r=estimate_optimal_radius(s,K);
 	const double norm=1.0/(r+1+r);
 	std::vector<double> spect=gen_spectrum(K,s,r);
 	std::vector<double> table=build_lookup_table(r,spect);
@@ -161,7 +192,7 @@ static inline void apply_spatial_gauss_y<double,4,2>(int w,int h,double* src,dou
 {
 	const int CH=4,K=2;
 
-	const int r=estimate_radius(s);
+	const int r=estimate_optimal_radius(s,K);
 	const double norm=1.0/(r+1+r);
 	std::vector<double> spect=gen_spectrum(K,s,r);
 	std::vector<double> table=build_lookup_table(r,spect);
