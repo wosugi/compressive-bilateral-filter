@@ -21,11 +21,11 @@
 
 //==================================================================================================
 
-// This class is an implementation of the following paper, specialized in our bilateral filter.
-//   - K. Sugimoto and S. Kamata:
-//     "Efficient constant-time Gaussian filtering with sliding DCT/DST-5 and dual-domain error minimization",
-//     ITE Trans. Media Technol. Appl., vol. 3, no. 1, pp. 12-21 (Jan. 2015).
-// This paper also needs to be cited in your paper if you use this code.
+/// This class is an implementation of the following paper, specialized in our bilateral filter.
+///   - K. Sugimoto and S. Kamata:
+///     "Efficient constant-time Gaussian filtering with sliding DCT/DST-5 and dual-domain error minimization",
+///     ITE Trans. Media Technol. Appl., vol. 3, no. 1, pp. 12-21 (Jan. 2015).
+/// This paper also needs to be cited in your paper if you use this code.
 template<int K>
 class constant_time_spatial_gaussian_filter
 {
@@ -60,7 +60,7 @@ public:
 	}
 	
 private:
-	// a scale-adjusted derivative of the estimated Gaussian spatial kernel error
+	/// a scale-adjusted derivative of the estimated Gaussian spatial kernel error
 	class derivative_estimated_gaussian_spatial_kernel_error
 	{
 	private:
@@ -76,7 +76,7 @@ private:
 			return phi*exp(-phi*phi)-psi*exp(-psi*psi);
 		}
 	};
-	// solve df(x)==0 by binary search for integer x=[x1,x2)
+	/// solve df(x)==0 by binary search for integer x=[x1,x2)
 	template<class Functor>
 	inline int solve_by_bs(Functor df,int x1,int x2)
 	{
@@ -115,7 +115,7 @@ public:
 		filter_x<T,CH>(w,h,dst,dst); // only filter_x() allows in-place filtering.
 	}
 	
-	// OpenCV2 interface for easy function call
+	/// OpenCV2 interface for easy function call
 	void filter(const cv::Mat& src,cv::Mat& dst)
 	{
 		// checking the format of input/output images

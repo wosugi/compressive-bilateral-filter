@@ -28,9 +28,10 @@
 #endif
 
 // parameters of BF algorithms
-const double ss=2.0;
-const double sr=0.1;
+const double sigmaS=2.0;
+const double sigmaR=0.1;
 const double tau=0.1; // for compressive BF
+const int tone=(1<<8); // assuming 8-bits dynamic range, ie, [0,256).
 
 const bool sw_display_results=true;
 
@@ -79,23 +80,23 @@ int main(int argc,char** argv)
 		return 1;
 	}
 	
-	const int tone=(1<<8); // assuming 8-bits dynamic range, ie, [0,256).
 	cv::Mat_<double> image=image0/double(tone-1); // dynamic range is transformed to [0,1]
 	cv::Mat_<double> dst0(image.size());
 	cv::Mat_<double> dst1(image.size());
 
-	std::cerr<<cv::format("[ss=%f sr=%f]",ss,sr)<<std::endl;
+	std::cerr<<cv::format("[ss=%f sr=%f]",sigmaS,sigmaR)<<std::endl;
 
 	cv::TickMeter tm;
 	
 	tm.start();
-	apply_bilateral_filter_original<tone>(image,dst0,ss,sr);
+	apply_bilateral_filter_original(image,dst0,sigmaS,sigmaR,tone);
 	tm.stop();
 	std::cerr<<cv::format("Original BF:     %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();
 
 	tm.start();
-	apply_bilateral_filter_compressive<tone>(image,dst1,ss,sr,tau);
+	compressive_bilateral_filter cbf(sigmaS,sigmaR,tau);
+	cbf(image,dst1,tone);
 	tm.stop();
 	std::cerr<<cv::format("Compressive BF:  %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();

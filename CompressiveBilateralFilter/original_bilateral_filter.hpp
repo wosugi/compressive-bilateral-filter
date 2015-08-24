@@ -17,8 +17,7 @@
 #define atE(x) (w-1-std::abs(w-1-(x)))
 #define atS(y) (h-1-std::abs(h-1-(y)))
 
-template<int TONE>
-void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double>& dst,double ss,double sr)
+void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double>& dst,double ss,double sr,int tone=256)
 {
 	assert(src.size()==dst.size());
 	//assert(0.5<=ss && ss<=32.0);
@@ -35,11 +34,11 @@ void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double
 		kernelS(v,u)=exp(-(u*u+v*v)/(2.0*ss*ss));
 	
 	// generating range kernel (discretized for fast computation)
-	std::vector<double> kernelR(TONE);
+	std::vector<double> kernelR(tone);
 	const double gamma=1.0/(2.0*sr*sr);
-	for(int p=0;p<TONE;++p)
+	for(int p=0;p<tone;++p)
 	{
-		double t=double(p)/double(TONE-1);
+		double t=double(p)/double(tone-1);
 		kernelR[p]=exp(-gamma*t*t);
 	}
 	
@@ -54,8 +53,8 @@ void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double
 		{
 			double p0=src(y,atW(x-u));
 			double p1=src(y,atE(x+u));
-			double wr0=kernelR[abs(int((TONE-1)*(p0-p)))];
-			double wr1=kernelR[abs(int((TONE-1)*(p1-p)))];
+			double wr0=kernelR[abs(int((tone-1)*(p0-p)))];
+			double wr1=kernelR[abs(int((tone-1)*(p1-p)))];
 			numer+=kernelS(0,u)*(wr0   +wr1   );
 			denom+=kernelS(0,u)*(wr0*p0+wr1*p1);
 		}
@@ -63,8 +62,8 @@ void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double
 		{
 			double p0=src(atN(y-v),x);
 			double p1=src(atS(y+v),x);
-			double wr0=kernelR[abs(int((TONE-1)*(p0-p)))];
-			double wr1=kernelR[abs(int((TONE-1)*(p1-p)))];
+			double wr0=kernelR[abs(int((tone-1)*(p0-p)))];
+			double wr1=kernelR[abs(int((tone-1)*(p1-p)))];
 			numer+=kernelS(v,0)*(wr0   +wr1   );
 			denom+=kernelS(v,0)*(wr0*p0+wr1*p1);
 		}
@@ -75,10 +74,10 @@ void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double
 			double p01=src(atS(y+v),atW(x-u));
 			double p10=src(atN(y-v),atE(x+u));
 			double p11=src(atS(y+v),atE(x+u));
-			double wr00=kernelR[abs(int((TONE-1)*(p00-p)))];
-			double wr01=kernelR[abs(int((TONE-1)*(p01-p)))];
-			double wr10=kernelR[abs(int((TONE-1)*(p10-p)))];
-			double wr11=kernelR[abs(int((TONE-1)*(p11-p)))];
+			double wr00=kernelR[abs(int((tone-1)*(p00-p)))];
+			double wr01=kernelR[abs(int((tone-1)*(p01-p)))];
+			double wr10=kernelR[abs(int((tone-1)*(p10-p)))];
+			double wr11=kernelR[abs(int((tone-1)*(p11-p)))];
 			numer+=kernelS(v,u)*(wr00    +wr01    +wr10    +wr11    );
 			denom+=kernelS(v,u)*(wr00*p00+wr01*p01+wr10*p10+wr11*p11);
 		}
