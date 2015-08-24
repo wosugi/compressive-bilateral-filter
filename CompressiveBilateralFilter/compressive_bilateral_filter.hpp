@@ -78,7 +78,8 @@ void apply_bilateral_filter_compressive(const cv::Mat_<double>& src,cv::Mat_<dou
 	cv::Mat_<double> denom(src.size(),1.0);
 	cv::Mat_<double> numer(src.size());
 	cv::GaussianBlur(src,numer,cv::Size(),ss,ss,cv::BORDER_REFLECT_101); // temporal implementation
-	
+	constant_time_spatial_gaussian_filter<2> gaussian(ss);
+
 	// AC components
 	const double omega=2.0*M_PI/T;
 	for(int k=1;k<=K;++k)
@@ -102,7 +103,8 @@ void apply_bilateral_filter_compressive(const cv::Mat_<double>& src,cv::Mat_<dou
 			double sp=tblS[p];
 			comps(y,x)=cv::Vec4d(cp*src(y,x),sp*src(y,x),cp,sp);
 		}
-		apply_spatial_gauss(comps,comps,ss,ss);
+		//apply_spatial_gauss(comps,comps,ss,ss);
+		gaussian.filter(comps,comps);
 		
 		// decompressing k-th components
 		for(int y=0;y<src.rows;++y)

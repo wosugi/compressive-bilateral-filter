@@ -21,93 +21,134 @@
 
 //==================================================================================================
 
-// a scale-adjusted derivative of the estimated Gaussian spatial kernel error
-class derivative_estimated_gaussian_spatial_kernel_error
+// This class is an implementation of the following paper, specialized in our bilateral filter.
+//   - K. Sugimoto and S. Kamata:
+//     "Efficient constant-time Gaussian filtering with sliding DCT/DST-5 and dual-domain error minimization",
+//     ITE Trans. Media Technol. Appl., vol. 3, no. 1, pp. 12-21 (Jan. 2015).
+// This paper also needs to be cited in your paper if you use this code.
+template<int K>
+class constant_time_spatial_gaussian_filter
 {
 private:
-	double s;
-	int K;
+	int r;
+	std::vector<double> table;
+	std::vector<double> coef1;
+	std::vector<double> coefR;
+
 public:
-	derivative_estimated_gaussian_spatial_kernel_error(double s,int K):s(s),K(K){}
-public:
-	double operator()(int r)
+	constant_time_spatial_gaussian_filter(double sigma)
 	{
-		double phi=(2*r+1)/(2.0*s); // spatial domain
-		double psi=M_PI*s*(2*K+1)/(2*r+1); // spectral domain
-		return psi*exp(-psi*psi)-phi*exp(-phi*phi);
+		if(sigma<1.0)
+			throw std::invalid_argument("Out of range! (sigma<1.0)");
+		
+		// estimating the optimal filter window size
+		r=estimate_optimal_radius(sigma);
+		
+		// generating coefficients etc.
+		double omega=2.0*M_PI/(r+1+r);
+		table=std::vector<double>(K*(1+r));
+		coef1=std::vector<double>(K);
+		coefR=std::vector<double>(K);
+		for(int k=1;k<=K;k++)
+		{
+			double ak=2.0*exp(-0.5*omega*omega*sigma*sigma*k*k);
+			for(int u=0;u<=r;++u)
+				table[K*u+k-1]=ak*cos(omega*k*u);
+			coef1[k-1]=table[K*1+k-1]*2.0/ak;
+			coefR[k-1]=table[K*r+k-1];
+		}
+	}
+	
+private:
+	// a scale-adjusted derivative of the estimated Gaussian spatial kernel error
+	class derivative_estimated_gaussian_spatial_kernel_error
+	{
+	private:
+		double s;
+		int K;
+	public:
+		derivative_estimated_gaussian_spatial_kernel_error(double s,int K):s(s),K(K){}
+	public:
+		double operator()(int r)
+		{
+			double phi=(2*r+1)/(2.0*s); // spatial domain
+			double psi=M_PI*s*(2*K+1)/(2*r+1); // spectral domain
+			return phi*exp(-phi*phi)-psi*exp(-psi*psi);
+		}
+	};
+	// solve df(x)==0 by binary search for integer x=[x1,x2)
+	template<class Functor>
+	inline int solve_by_bs(Functor df,int x1,int x2)
+	{
+		while(1<x2-x1)
+		{
+			int x=(x1+x2)/2;
+			((0.0<df(x))?x2:x1)=x;
+		}
+		return (abs(df(x1))<=abs(df(x2)))?x1:x2;
+	}
+	inline int estimate_optimal_radius(double sigma)
+	{
+		derivative_estimated_gaussian_spatial_kernel_error df(sigma,K);
+		int r=solve_by_bs(df,int(2.0*sigma),int(4.0*sigma));
+		return r;
+	}
+
+public:
+	template<typename T,int CH>
+	inline void filter_x(int w,int h,T* src,T* dst)
+	{
+		throw std::invalid_argument("Unimplemented element type and/or channel!");
+	}
+	template<typename T,int CH>
+	inline void filter_y(int w,int h,T* src,T* dst)
+	{
+		throw std::invalid_argument("Unimplemented element type and/or channel!");
+	}
+	template<typename T,int CH>
+	void filter(int w,int h,T* src,T* dst)
+	{
+		if(w<r+1+r || h<r+1+r)
+			throw std::invalid_argument("Image size has to be larger than filter window size!");
+	
+		filter_y<T,CH>(w,h,src,dst);
+		filter_x<T,CH>(w,h,dst,dst); // only filter_x() allows in-place filtering.
+	}
+	
+	// OpenCV2 interface for easy function call
+	void filter(const cv::Mat& src,cv::Mat& dst)
+	{
+		// checking the format of input/output images
+		if(src.size()!=dst.size())
+			throw std::invalid_argument("\'src\' and \'dst\' should have the same size!");
+		if(src.type()!=dst.type())
+			throw std::invalid_argument("\'src\' and \'dst\' should have the same element type!");
+		if(src.isSubmatrix() || dst.isSubmatrix())
+			throw std::invalid_argument("Subimages are unsupported!");
+
+		switch(src.type())
+		{
+	//	case CV_32FC1: filter< float,1>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data)); break;
+	//	case CV_32FC4: filter< float,4>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data)); break;
+	//	case CV_64FC1: filter<double,1>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data)); break;
+		case CV_64FC4: filter<double,4>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data)); break;
+		default: throw std::invalid_argument("Unsupported element type or channel!"); break;
+		}
 	}
 };
 
-// solve df(x)==0 by binary search for integer x=[x1,x2)
-template<class Functor>
-inline int solve_by_bs(Functor df,int x1,int x2)
-{
-	while(1<x2-x1)
-	{
-		int x=(x1+x2)/2;
-		((0.0<df(x))?x2:x1)=x;
-	}
-	return (abs(df(x1))<=abs(df(x2)))?x1:x2;
-}
-
-static inline int estimate_optimal_radius(double s,int K)
-{
-	derivative_estimated_gaussian_spatial_kernel_error df(s,K);
-	int r=solve_by_bs(df,int(2.0*s),int(4.0*s));
-	return r;
-}
-
-static inline double phase(int r)
-{
-	return 2.0*M_PI/(2*r+1); // the unit phase step for DCT/DST-5
-}
-
-static inline std::vector<double> gen_spectrum(int K,double s,int r)
-{
-	const double omega=phase(r);
-	std::vector<double> spect(K);
-	for(int k=1;k<=K;k++)
-		spect[k-1]=2.0*exp(-0.5*omega*omega*s*s*k*k);
-	return spect;
-}
-static inline std::vector<double> build_lookup_table(int r,std::vector<double>& spect)
-{
-	const int K=spect.size();
-	const double omega=phase(r);
-	std::vector<double> table(K*(1+r));
-	for(int u=0;u<=r;++u)
-		for(int k=1;k<=K;++k)
-			table[K*u+k-1]=cos(omega*k*u)*spect[k-1];
-	return table;
-}
-
-//==================================================================================================
-
-template <typename T,int CH,int K>
-static inline void apply_spatial_gauss_x(int w,int h,T* src,T* dst,double s)
-{
-	throw std::invalid_argument("Unsupported parameters!");
-}
-template <typename T,int CH,int K>
-static inline void apply_spatial_gauss_y(int w,int h,T* src,T* dst,double s)
-{
-	throw std::invalid_argument("Unsupported parameters!");
-}
-
 //--------------------------------------------------------------------------------------------------
 
-template<>
-static inline void apply_spatial_gauss_x<double,4,2>(int w,int h,double* src,double* dst,double s)
+template<> template<>
+void constant_time_spatial_gaussian_filter<2>::filter_x<double,4>(int w,int h,double* src,double* dst)
 {
-	const int CH=4,K=2;
+	const int K=2,CH=4;
 	
-	const int r=estimate_optimal_radius(s,K);
+	const int r=this->r;
 	const double norm=1.0/(r+1+r);
-	std::vector<double> spect=gen_spectrum(K,s,r);
-	std::vector<double> table=build_lookup_table(r,spect);
-
-	const double cf11=table[K*1+0]*2.0/spect[0], cfR1=table[K*r+0];
-	const double cf12=table[K*1+1]*2.0/spect[1], cfR2=table[K*r+1];
+	const std::vector<double> table=this->table;
+	const double cf11=coef1[0], cfR1=coefR[0];
+	const double cf12=coef1[1], cfR2=coefR[1];
 
 	std::vector<double> diff(CH*w); // for in-place filtering
 	for(int y=0;y<h;++y)
@@ -187,19 +228,17 @@ static inline void apply_spatial_gauss_x<double,4,2>(int w,int h,double* src,dou
 
 //--------------------------------------------------------------------------------------------------
 
-template<>
-static inline void apply_spatial_gauss_y<double,4,2>(int w,int h,double* src,double* dst,double s)
+template<> template<>
+inline void constant_time_spatial_gaussian_filter<2>::filter_y<double,4>(int w,int h,double* src,double* dst)
 {
-	const int CH=4,K=2;
-
-	const int r=estimate_optimal_radius(s,K);
-	const double norm=1.0/(r+1+r);
-	std::vector<double> spect=gen_spectrum(K,s,r);
-	std::vector<double> table=build_lookup_table(r,spect);
-
-	const double cf11=table[K*1+0]*2.0/spect[0], cfR1=table[K*r+0];
-	const double cf12=table[K*1+1]*2.0/spect[1], cfR2=table[K*r+1];
+	const int K=2,CH=4;
 	
+	const int r=this->r;
+	const double norm=1.0/(r+1+r);
+	const std::vector<double> table=this->table;
+	const double cf11=coef1[0], cfR1=coefR[0];
+	const double cf12=coef1[1], cfR2=coefR[1];
+
 	std::vector<double> workspace(CH*w*(2*K+2)); // work space to keep raster scanning
 
 	// preparing initial entries
@@ -278,51 +317,6 @@ static inline void apply_spatial_gauss_y<double,4,2>(int w,int h,double* src,dou
 			ws[5]=diff;
 		}
 		y++; if(h<=y) break;
-	}
-}
-
-//==================================================================================================
-
-template <typename T,int CH,int K>
-void apply_spatial_gauss(int w,int h,T* src,T* dst,double sx,double sy)
-{
-	if(w<=4.0*sx || h<=4.0*sy)
-		throw std::invalid_argument("\'sx\' and \'sy\' should be less than about w/4 or h/4!");
-		
-	// filtering is skipped if s==0.0
-	if(sx==0.0 && sy==0.0)
-		return;
-	else if(sx==0.0)
-		apply_spatial_gauss_y<T,CH,K>(w,h,src,dst,sy);
-	else if(sy==0.0)
-		apply_spatial_gauss_x<T,CH,K>(w,h,src,dst,sx);
-	else
-	{
-		apply_spatial_gauss_y<T,CH,K>(w,h,src,dst,sy);
-		apply_spatial_gauss_x<T,CH,K>(w,h,dst,dst,sx); // only filter_gauss_x() allows in-place filtering.
-	}
-}
-
-// OpenCV2 interface for easy function call
-void apply_spatial_gauss(const cv::Mat& src,cv::Mat& dst,double sx,double sy)
-{
-	// checking the format of input/output images
-	if(src.size()!=dst.size())
-		throw std::invalid_argument("\'src\' and \'dst\' should have the same size!");
-	if(src.type()!=dst.type())
-		throw std::invalid_argument("\'src\' and \'dst\' should have the same element type!");
-	if(src.isSubmatrix() || dst.isSubmatrix())
-		throw std::invalid_argument("Subimages are unsupported!");
-
-	switch(src.type())
-	{
-//	case CV_32FC1: apply_spatial_gauss< float,1,2>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data),sx,sy); break;
-//	case CV_32FC4: apply_spatial_gauss< float,4,2>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data),sx,sy); break;
-//	case CV_64FC1: apply_spatial_gauss<double,1,2>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data),sx,sy); break;
-	case CV_64FC4: apply_spatial_gauss<double,4,2>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data),sx,sy); break;
-	default:
-		throw std::invalid_argument("Unsupported element type or channel!");
-		break;
 	}
 }
 
