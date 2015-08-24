@@ -25,13 +25,12 @@ class compressive_bilateral_filter
 private:
 	int K;
 	double T;
-	double _sigmaS;
 	std::vector<double> sqrta;
 //	constant_time_spatial_gaussian_filter<1> gaussian;
 	constant_time_spatial_gaussian_filter<2> gaussian;
 
 public:
-	compressive_bilateral_filter(double sigmaS,double sigmaR,double tau):gaussian(sigmaS),_sigmaS(sigmaS)
+	compressive_bilateral_filter(double sigmaS,double sigmaR,double tau):gaussian(sigmaS)
 	{
 		// estimating an optimal K
 		double xi=boost::math::erfc_inv(tau*tau);
@@ -93,7 +92,7 @@ public:
 		// DC component
 		cv::Mat_<double> denom(src.size(),1.0);
 		cv::Mat_<double> numer(src.size());
-		cv::GaussianBlur(src,numer,cv::Size(),_sigmaS,_sigmaS,cv::BORDER_REFLECT_101); // temporal implementation
+		gaussian.filter(src,numer);
 
 		// AC components
 		double omega=2.0*M_PI/T;

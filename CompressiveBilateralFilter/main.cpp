@@ -33,7 +33,7 @@ const double sigmaR=0.1;
 const double tau=0.1; // for compressive BF
 const int tone=(1<<8); // assuming 8-bits dynamic range, ie, [0,256).
 
-const bool sw_display_results=true;
+const bool sw_display_results=false;
 
 template<typename T>
 double calc_snr(const cv::Mat_<T>& image1,const cv::Mat_<T>& image2,T minval,T maxval)

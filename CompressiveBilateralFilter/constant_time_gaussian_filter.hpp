@@ -31,9 +31,7 @@ class constant_time_spatial_gaussian_filter
 {
 private:
 	int r;
-	std::vector<double> table;
-	std::vector<double> coef1;
-	std::vector<double> coefR;
+	std::vector<double> table,coef1,coefR;
 
 public:
 	constant_time_spatial_gaussian_filter(double sigma)
@@ -94,27 +92,29 @@ private:
 		return r;
 	}
 
+private:
+	/// only filter_x() allows in-place filtering.
+	template<int CH>
+	void filter_x(int w,int h,double* src,double* dst)
+	{
+		throw std::invalid_argument("Unimplemented channel!");
+	}
+	template<int CH>
+	void filter_y(int w,int h,double* src,double* dst)
+	{
+		throw std::invalid_argument("Unimplemented channel!");
+	}
+
 public:
-	template<typename T,int CH>
-	inline void filter_x(int w,int h,T* src,T* dst)
-	{
-		throw std::invalid_argument("Unimplemented element type and/or channel!");
-	}
-	template<typename T,int CH>
-	inline void filter_y(int w,int h,T* src,T* dst)
-	{
-		throw std::invalid_argument("Unimplemented element type and/or channel!");
-	}
 	template<typename T,int CH>
 	void filter(int w,int h,T* src,T* dst)
 	{
 		if(w<r+1+r || h<r+1+r)
 			throw std::invalid_argument("Image size has to be larger than filter window size!");
 	
-		filter_y<T,CH>(w,h,src,dst);
-		filter_x<T,CH>(w,h,dst,dst); // only filter_x() allows in-place filtering.
+		filter_y<CH>(w,h,src,dst);
+		filter_x<CH>(w,h,dst,dst);
 	}
-	
 	/// OpenCV2 interface for easy function call
 	void filter(const cv::Mat& src,cv::Mat& dst)
 	{
@@ -130,7 +130,7 @@ public:
 		{
 	//	case CV_32FC1: filter< float,1>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data)); break;
 	//	case CV_32FC4: filter< float,4>(src.cols,src.rows,reinterpret_cast< float*>(src.data),reinterpret_cast< float*>(dst.data)); break;
-	//	case CV_64FC1: filter<double,1>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data)); break;
+		case CV_64FC1: filter<double,1>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data)); break;
 		case CV_64FC4: filter<double,4>(src.cols,src.rows,reinterpret_cast<double*>(src.data),reinterpret_cast<double*>(dst.data)); break;
 		default: throw std::invalid_argument("Unsupported element type or channel!"); break;
 		}
@@ -140,15 +140,71 @@ public:
 //--------------------------------------------------------------------------------------------------
 
 template<> template<>
-void constant_time_spatial_gaussian_filter<2>::filter_x<double,4>(int w,int h,double* src,double* dst)
+void constant_time_spatial_gaussian_filter<2>::filter_x<1>(int w,int h,double* src,double* dst)
+{
+	const int K=2,CH=1;
+	
+	const int r=this->r;
+	const std::vector<double> table=this->table;
+	const double cf11=coef1[0], cfR1=coefR[0];
+	const double cf12=coef1[1], cfR2=coefR[1];
+	const double norm=1.0/(r+1+r);
+
+	std::vector<double> diff(CH*w); // for in-place filtering
+	for(int y=0;y<h;++y)
+	{
+		double* p=&src[CH*w*y];
+		double* q=&dst[CH*w*y];
+		
+		// preparing initial entries
+		double dc0=p[0], a0=p[0]*table[0], b0=p[CH+0]*table[0], aa0=p[0]*table[1], bb0=p[CH+0]*table[1];
+		for(int u=1;u<=r;++u)
+		{
+			const double sumA0=p[CH*atW(0-u)+0]+p[CH*(0+u)+0], sumB0=p[CH*atW(1-u)+0]+p[CH*(1+u)+0];
+			dc0+=sumA0; a0+=sumA0*table[K*u+0]; b0+=sumB0*table[K*u+0]; aa0+=sumA0*table[K*u+1]; bb0+=sumB0*table[K*u+1];
+		}
+
+		// calculating difference values in advance
+		for(int x=0;x<w;++x)
+		{
+			const double* pE=&p[CH*atE(x+r+1)];
+			const double* pW=&p[CH*atW(x-r  )];
+			diff[CH*x+0]=pE[0]-pW[0];
+		}
+
+		double dA0,dB0,delta0;
+		
+		// the first pixel (x=0)
+		q[CH*0+0]=norm*(dc0+a0+aa0); dA0=diff[CH*0+0]; dc0+=dA0;
+		
+		// the other pixels (x=1,2,...,w-1)
+		int x=1;
+		while(true) // with 4-length ring buffer
+		{
+			q[CH*x+0]=norm*(dc0+b0+bb0); dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0+cfR1*delta0; aa0+=-cf12*bb0+cfR2*delta0;
+			x++; if(w<=x) break;
+
+			q[CH*x+0]=norm*(dc0-a0-aa0); dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0+cfR1*delta0; bb0+=+cf12*aa0+cfR2*delta0;
+			x++; if(w<=x) break;
+
+			q[CH*x+0]=norm*(dc0-b0-bb0); dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0-cfR1*delta0; aa0+=-cf12*bb0-cfR2*delta0;
+			x++; if(w<=x) break;
+
+			q[CH*x+0]=norm*(dc0+a0+aa0); dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0-cfR1*delta0; bb0+=+cf12*aa0-cfR2*delta0;
+			x++; if(w<=x) break;
+		}
+	}
+}
+template<> template<>
+void constant_time_spatial_gaussian_filter<2>::filter_x<4>(int w,int h,double* src,double* dst)
 {
 	const int K=2,CH=4;
 	
 	const int r=this->r;
-	const double norm=1.0/(r+1+r);
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
 	const double cf12=coef1[1], cfR2=coefR[1];
+	const double norm=1.0/(r+1+r);
 
 	std::vector<double> diff(CH*w); // for in-place filtering
 	for(int y=0;y<h;++y)
@@ -228,16 +284,16 @@ void constant_time_spatial_gaussian_filter<2>::filter_x<double,4>(int w,int h,do
 
 //--------------------------------------------------------------------------------------------------
 
-template<> template<>
-inline void constant_time_spatial_gaussian_filter<2>::filter_y<double,4>(int w,int h,double* src,double* dst)
+template<> template<int CH>
+void constant_time_spatial_gaussian_filter<2>::filter_y(int w,int h,double* src,double* dst)
 {
-	const int K=2,CH=4;
+	const int K=2;
 	
 	const int r=this->r;
-	const double norm=1.0/(r+1+r);
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
 	const double cf12=coef1[1], cfR2=coefR[1];
+	const double norm=1.0/(r+1+r);
 
 	std::vector<double> workspace(CH*w*(2*K+2)); // work space to keep raster scanning
 
@@ -279,7 +335,6 @@ inline void constant_time_spatial_gaussian_filter<2>::filter_y<double,4>(int w,i
 			ws[5]=diff;
 		}
 	}
-	
 	// the other lines (y=1,2,...,h-1)
 	int y=1;
 	while(true) // with 2-length ring buffers
