@@ -170,7 +170,6 @@ void constant_time_spatial_gaussian_filter<1>::filter_x<1>(int w,int h,double* s
 	const int r=this->r;
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
-	const double norm=1.0/window_size();
 
 	std::vector<double> diff(CH*w); // for in-place filtering
 	for(int y=0;y<h;++y)
@@ -197,19 +196,19 @@ void constant_time_spatial_gaussian_filter<1>::filter_x<1>(int w,int h,double* s
 		double dA0,dB0;
 		
 		// the first pixel (x=0)
-		q[CH*0+0]=norm*(dc0+a0); dA0=diff[CH*0+0]; dc0+=dA0;
+		q[CH*0+0]=dc0+a0; dA0=diff[CH*0+0]; dc0+=dA0;
 		
 		// the other pixels (x=1,2,...,w-1)
 		int x=1;
 		while(true) // with 4-length ring buffer
 		{
-			q[CH*x+0]=norm*(dc0+b0); dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0+cfR1*(dA0-dB0);
+			q[CH*x+0]=dc0+b0; dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0+cfR1*(dA0-dB0);
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-a0); dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0+cfR1*(dB0-dA0);
+			q[CH*x+0]=dc0-a0; dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0+cfR1*(dB0-dA0);
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-b0); dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0-cfR1*(dA0-dB0);
+			q[CH*x+0]=dc0-b0; dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0-cfR1*(dA0-dB0);
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0+a0); dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0-cfR1*(dB0-dA0);
+			q[CH*x+0]=dc0+a0; dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0-cfR1*(dB0-dA0);
 			x++; if(w<=x) break;
 		}
 	}
@@ -223,7 +222,6 @@ void constant_time_spatial_gaussian_filter<2>::filter_x<1>(int w,int h,double* s
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
 	const double cf12=coef1[1], cfR2=coefR[1];
-	const double norm=1.0/window_size();
 
 	std::vector<double> diff(CH*w); // for in-place filtering
 	for(int y=0;y<h;++y)
@@ -250,19 +248,19 @@ void constant_time_spatial_gaussian_filter<2>::filter_x<1>(int w,int h,double* s
 		double dA0,dB0,delta0;
 		
 		// the first pixel (x=0)
-		q[CH*0+0]=norm*(dc0+a0+aa0); dA0=diff[CH*0+0]; dc0+=dA0;
+		q[CH*0+0]=dc0+a0+aa0; dA0=diff[CH*0+0]; dc0+=dA0;
 		
 		// the other pixels (x=1,2,...,w-1)
 		int x=1;
 		while(true) // with 4-length ring buffer
 		{
-			q[CH*x+0]=norm*(dc0+b0+bb0); dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0+cfR1*delta0; aa0+=-cf12*bb0+cfR2*delta0;
+			q[CH*x+0]=dc0+b0+bb0; dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0+cfR1*delta0; aa0+=-cf12*bb0+cfR2*delta0;
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-a0-aa0); dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0+cfR1*delta0; bb0+=+cf12*aa0+cfR2*delta0;
+			q[CH*x+0]=dc0-a0-aa0; dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0+cfR1*delta0; bb0+=+cf12*aa0+cfR2*delta0;
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-b0-bb0); dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0-cfR1*delta0; aa0+=-cf12*bb0-cfR2*delta0;
+			q[CH*x+0]=dc0-b0-bb0; dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0-cfR1*delta0; aa0+=-cf12*bb0-cfR2*delta0;
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0+a0+aa0); dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0-cfR1*delta0; bb0+=+cf12*aa0-cfR2*delta0;
+			q[CH*x+0]=dc0+a0+aa0; dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0-cfR1*delta0; bb0+=+cf12*aa0-cfR2*delta0;
 			x++; if(w<=x) break;
 		}
 	}
@@ -275,7 +273,6 @@ void constant_time_spatial_gaussian_filter<1>::filter_x<4>(int w,int h,double* s
 	const int r=this->r;
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
-	const double norm=1.0/window_size();
 
 	std::vector<double> diff(CH*w); // for in-place filtering
 	for(int y=0;y<h;++y)
@@ -317,34 +314,34 @@ void constant_time_spatial_gaussian_filter<1>::filter_x<4>(int w,int h,double* s
 		double dA3,dB3;
 		
 		// the first pixel (x=0)
-		q[CH*0+0]=norm*(dc0+a0); dA0=diff[CH*0+0]; dc0+=dA0;
-		q[CH*0+1]=norm*(dc1+a1); dA1=diff[CH*0+1]; dc1+=dA1;
-		q[CH*0+2]=norm*(dc2+a2); dA2=diff[CH*0+2]; dc2+=dA2;
-		q[CH*0+3]=norm*(dc3+a3); dA3=diff[CH*0+3]; dc3+=dA3;
+		q[CH*0+0]=dc0+a0; dA0=diff[CH*0+0]; dc0+=dA0;
+		q[CH*0+1]=dc1+a1; dA1=diff[CH*0+1]; dc1+=dA1;
+		q[CH*0+2]=dc2+a2; dA2=diff[CH*0+2]; dc2+=dA2;
+		q[CH*0+3]=dc3+a3; dA3=diff[CH*0+3]; dc3+=dA3;
 		
 		// the other pixels (x=1,2,...,w-1)
 		int x=1;
 		while(true) // with 4-length ring buffer
 		{
-			q[CH*x+0]=norm*(dc0+b0); dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0+cfR1*(dA0-dB0);
-			q[CH*x+1]=norm*(dc1+b1); dB1=diff[CH*x+1]; dc1+=dB1; a1+=-cf11*b1+cfR1*(dA1-dB1);
-			q[CH*x+2]=norm*(dc2+b2); dB2=diff[CH*x+2]; dc2+=dB2; a2+=-cf11*b2+cfR1*(dA2-dB2);
-			q[CH*x+3]=norm*(dc3+b3); dB3=diff[CH*x+3]; dc3+=dB3; a3+=-cf11*b3+cfR1*(dA3-dB3);
+			q[CH*x+0]=dc0+b0; dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0+cfR1*(dA0-dB0);
+			q[CH*x+1]=dc1+b1; dB1=diff[CH*x+1]; dc1+=dB1; a1+=-cf11*b1+cfR1*(dA1-dB1);
+			q[CH*x+2]=dc2+b2; dB2=diff[CH*x+2]; dc2+=dB2; a2+=-cf11*b2+cfR1*(dA2-dB2);
+			q[CH*x+3]=dc3+b3; dB3=diff[CH*x+3]; dc3+=dB3; a3+=-cf11*b3+cfR1*(dA3-dB3);
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-a0); dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0+cfR1*(dB0-dA0);
-			q[CH*x+1]=norm*(dc1-a1); dA1=diff[CH*x+1]; dc1+=dA1; b1+=+cf11*a1+cfR1*(dB1-dA1);
-			q[CH*x+2]=norm*(dc2-a2); dA2=diff[CH*x+2]; dc2+=dA2; b2+=+cf11*a2+cfR1*(dB2-dA2);
-			q[CH*x+3]=norm*(dc3-a3); dA3=diff[CH*x+3]; dc3+=dA3; b3+=+cf11*a3+cfR1*(dB3-dA3);
+			q[CH*x+0]=dc0-a0; dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0+cfR1*(dB0-dA0);
+			q[CH*x+1]=dc1-a1; dA1=diff[CH*x+1]; dc1+=dA1; b1+=+cf11*a1+cfR1*(dB1-dA1);
+			q[CH*x+2]=dc2-a2; dA2=diff[CH*x+2]; dc2+=dA2; b2+=+cf11*a2+cfR1*(dB2-dA2);
+			q[CH*x+3]=dc3-a3; dA3=diff[CH*x+3]; dc3+=dA3; b3+=+cf11*a3+cfR1*(dB3-dA3);
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-b0); dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0-cfR1*(dA0-dB0);
-			q[CH*x+1]=norm*(dc1-b1); dB1=diff[CH*x+1]; dc1+=dB1; a1+=-cf11*b1-cfR1*(dA1-dB1);
-			q[CH*x+2]=norm*(dc2-b2); dB2=diff[CH*x+2]; dc2+=dB2; a2+=-cf11*b2-cfR1*(dA2-dB2);
-			q[CH*x+3]=norm*(dc3-b3); dB3=diff[CH*x+3]; dc3+=dB3; a3+=-cf11*b3-cfR1*(dA3-dB3);
+			q[CH*x+0]=dc0-b0; dB0=diff[CH*x+0]; dc0+=dB0; a0+=-cf11*b0-cfR1*(dA0-dB0);
+			q[CH*x+1]=dc1-b1; dB1=diff[CH*x+1]; dc1+=dB1; a1+=-cf11*b1-cfR1*(dA1-dB1);
+			q[CH*x+2]=dc2-b2; dB2=diff[CH*x+2]; dc2+=dB2; a2+=-cf11*b2-cfR1*(dA2-dB2);
+			q[CH*x+3]=dc3-b3; dB3=diff[CH*x+3]; dc3+=dB3; a3+=-cf11*b3-cfR1*(dA3-dB3);
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0+a0); dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0-cfR1*(dB0-dA0);
-			q[CH*x+1]=norm*(dc1+a1); dA1=diff[CH*x+1]; dc1+=dA1; b1+=+cf11*a1-cfR1*(dB1-dA1);
-			q[CH*x+2]=norm*(dc2+a2); dA2=diff[CH*x+2]; dc2+=dA2; b2+=+cf11*a2-cfR1*(dB2-dA2);
-			q[CH*x+3]=norm*(dc3+a3); dA3=diff[CH*x+3]; dc3+=dA3; b3+=+cf11*a3-cfR1*(dB3-dA3);
+			q[CH*x+0]=dc0+a0; dA0=diff[CH*x+0]; dc0+=dA0; b0+=+cf11*a0-cfR1*(dB0-dA0);
+			q[CH*x+1]=dc1+a1; dA1=diff[CH*x+1]; dc1+=dA1; b1+=+cf11*a1-cfR1*(dB1-dA1);
+			q[CH*x+2]=dc2+a2; dA2=diff[CH*x+2]; dc2+=dA2; b2+=+cf11*a2-cfR1*(dB2-dA2);
+			q[CH*x+3]=dc3+a3; dA3=diff[CH*x+3]; dc3+=dA3; b3+=+cf11*a3-cfR1*(dB3-dA3);
 			x++; if(w<=x) break;
 		}
 	}
@@ -358,7 +355,6 @@ void constant_time_spatial_gaussian_filter<2>::filter_x<4>(int w,int h,double* s
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
 	const double cf12=coef1[1], cfR2=coefR[1];
-	const double norm=1.0/window_size();
 
 	std::vector<double> diff(CH*w); // for in-place filtering
 	for(int y=0;y<h;++y)
@@ -400,34 +396,34 @@ void constant_time_spatial_gaussian_filter<2>::filter_x<4>(int w,int h,double* s
 		double dA3,dB3,delta3;
 		
 		// the first pixel (x=0)
-		q[CH*0+0]=norm*(dc0+a0+aa0); dA0=diff[CH*0+0]; dc0+=dA0;
-		q[CH*0+1]=norm*(dc1+a1+aa1); dA1=diff[CH*0+1]; dc1+=dA1;
-		q[CH*0+2]=norm*(dc2+a2+aa2); dA2=diff[CH*0+2]; dc2+=dA2;
-		q[CH*0+3]=norm*(dc3+a3+aa3); dA3=diff[CH*0+3]; dc3+=dA3;
+		q[CH*0+0]=dc0+a0+aa0; dA0=diff[CH*0+0]; dc0+=dA0;
+		q[CH*0+1]=dc1+a1+aa1; dA1=diff[CH*0+1]; dc1+=dA1;
+		q[CH*0+2]=dc2+a2+aa2; dA2=diff[CH*0+2]; dc2+=dA2;
+		q[CH*0+3]=dc3+a3+aa3; dA3=diff[CH*0+3]; dc3+=dA3;
 		
 		// the other pixels (x=1,2,...,w-1)
 		int x=1;
 		while(true) // with 4-length ring buffer
 		{
-			q[CH*x+0]=norm*(dc0+b0+bb0); dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0+cfR1*delta0; aa0+=-cf12*bb0+cfR2*delta0;
-			q[CH*x+1]=norm*(dc1+b1+bb1); dB1=diff[CH*x+1]; delta1=dA1-dB1; dc1+=dB1; a1+=-cf11*b1+cfR1*delta1; aa1+=-cf12*bb1+cfR2*delta1;
-			q[CH*x+2]=norm*(dc2+b2+bb2); dB2=diff[CH*x+2]; delta2=dA2-dB2; dc2+=dB2; a2+=-cf11*b2+cfR1*delta2; aa2+=-cf12*bb2+cfR2*delta2;
-			q[CH*x+3]=norm*(dc3+b3+bb3); dB3=diff[CH*x+3]; delta3=dA3-dB3; dc3+=dB3; a3+=-cf11*b3+cfR1*delta3; aa3+=-cf12*bb3+cfR2*delta3;
+			q[CH*x+0]=dc0+b0+bb0; dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0+cfR1*delta0; aa0+=-cf12*bb0+cfR2*delta0;
+			q[CH*x+1]=dc1+b1+bb1; dB1=diff[CH*x+1]; delta1=dA1-dB1; dc1+=dB1; a1+=-cf11*b1+cfR1*delta1; aa1+=-cf12*bb1+cfR2*delta1;
+			q[CH*x+2]=dc2+b2+bb2; dB2=diff[CH*x+2]; delta2=dA2-dB2; dc2+=dB2; a2+=-cf11*b2+cfR1*delta2; aa2+=-cf12*bb2+cfR2*delta2;
+			q[CH*x+3]=dc3+b3+bb3; dB3=diff[CH*x+3]; delta3=dA3-dB3; dc3+=dB3; a3+=-cf11*b3+cfR1*delta3; aa3+=-cf12*bb3+cfR2*delta3;
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-a0-aa0); dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0+cfR1*delta0; bb0+=+cf12*aa0+cfR2*delta0;
-			q[CH*x+1]=norm*(dc1-a1-aa1); dA1=diff[CH*x+1]; delta1=dB1-dA1; dc1+=dA1; b1+=+cf11*a1+cfR1*delta1; bb1+=+cf12*aa1+cfR2*delta1;
-			q[CH*x+2]=norm*(dc2-a2-aa2); dA2=diff[CH*x+2]; delta2=dB2-dA2; dc2+=dA2; b2+=+cf11*a2+cfR1*delta2; bb2+=+cf12*aa2+cfR2*delta2;
-			q[CH*x+3]=norm*(dc3-a3-aa3); dA3=diff[CH*x+3]; delta3=dB3-dA3; dc3+=dA3; b3+=+cf11*a3+cfR1*delta3; bb3+=+cf12*aa3+cfR2*delta3;
+			q[CH*x+0]=dc0-a0-aa0; dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0+cfR1*delta0; bb0+=+cf12*aa0+cfR2*delta0;
+			q[CH*x+1]=dc1-a1-aa1; dA1=diff[CH*x+1]; delta1=dB1-dA1; dc1+=dA1; b1+=+cf11*a1+cfR1*delta1; bb1+=+cf12*aa1+cfR2*delta1;
+			q[CH*x+2]=dc2-a2-aa2; dA2=diff[CH*x+2]; delta2=dB2-dA2; dc2+=dA2; b2+=+cf11*a2+cfR1*delta2; bb2+=+cf12*aa2+cfR2*delta2;
+			q[CH*x+3]=dc3-a3-aa3; dA3=diff[CH*x+3]; delta3=dB3-dA3; dc3+=dA3; b3+=+cf11*a3+cfR1*delta3; bb3+=+cf12*aa3+cfR2*delta3;
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0-b0-bb0); dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0-cfR1*delta0; aa0+=-cf12*bb0-cfR2*delta0;
-			q[CH*x+1]=norm*(dc1-b1-bb1); dB1=diff[CH*x+1]; delta1=dA1-dB1; dc1+=dB1; a1+=-cf11*b1-cfR1*delta1; aa1+=-cf12*bb1-cfR2*delta1;
-			q[CH*x+2]=norm*(dc2-b2-bb2); dB2=diff[CH*x+2]; delta2=dA2-dB2; dc2+=dB2; a2+=-cf11*b2-cfR1*delta2; aa2+=-cf12*bb2-cfR2*delta2;
-			q[CH*x+3]=norm*(dc3-b3-bb3); dB3=diff[CH*x+3]; delta3=dA3-dB3; dc3+=dB3; a3+=-cf11*b3-cfR1*delta3; aa3+=-cf12*bb3-cfR2*delta3;
+			q[CH*x+0]=dc0-b0-bb0; dB0=diff[CH*x+0]; delta0=dA0-dB0; dc0+=dB0; a0+=-cf11*b0-cfR1*delta0; aa0+=-cf12*bb0-cfR2*delta0;
+			q[CH*x+1]=dc1-b1-bb1; dB1=diff[CH*x+1]; delta1=dA1-dB1; dc1+=dB1; a1+=-cf11*b1-cfR1*delta1; aa1+=-cf12*bb1-cfR2*delta1;
+			q[CH*x+2]=dc2-b2-bb2; dB2=diff[CH*x+2]; delta2=dA2-dB2; dc2+=dB2; a2+=-cf11*b2-cfR1*delta2; aa2+=-cf12*bb2-cfR2*delta2;
+			q[CH*x+3]=dc3-b3-bb3; dB3=diff[CH*x+3]; delta3=dA3-dB3; dc3+=dB3; a3+=-cf11*b3-cfR1*delta3; aa3+=-cf12*bb3-cfR2*delta3;
 			x++; if(w<=x) break;
-			q[CH*x+0]=norm*(dc0+a0+aa0); dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0-cfR1*delta0; bb0+=+cf12*aa0-cfR2*delta0;
-			q[CH*x+1]=norm*(dc1+a1+aa1); dA1=diff[CH*x+1]; delta1=dB1-dA1; dc1+=dA1; b1+=+cf11*a1-cfR1*delta1; bb1+=+cf12*aa1-cfR2*delta1;
-			q[CH*x+2]=norm*(dc2+a2+aa2); dA2=diff[CH*x+2]; delta2=dB2-dA2; dc2+=dA2; b2+=+cf11*a2-cfR1*delta2; bb2+=+cf12*aa2-cfR2*delta2;
-			q[CH*x+3]=norm*(dc3+a3+aa3); dA3=diff[CH*x+3]; delta3=dB3-dA3; dc3+=dA3; b3+=+cf11*a3-cfR1*delta3; bb3+=+cf12*aa3-cfR2*delta3;
+			q[CH*x+0]=dc0+a0+aa0; dA0=diff[CH*x+0]; delta0=dB0-dA0; dc0+=dA0; b0+=+cf11*a0-cfR1*delta0; bb0+=+cf12*aa0-cfR2*delta0;
+			q[CH*x+1]=dc1+a1+aa1; dA1=diff[CH*x+1]; delta1=dB1-dA1; dc1+=dA1; b1+=+cf11*a1-cfR1*delta1; bb1+=+cf12*aa1-cfR2*delta1;
+			q[CH*x+2]=dc2+a2+aa2; dA2=diff[CH*x+2]; delta2=dB2-dA2; dc2+=dA2; b2+=+cf11*a2-cfR1*delta2; bb2+=+cf12*aa2-cfR2*delta2;
+			q[CH*x+3]=dc3+a3+aa3; dA3=diff[CH*x+3]; delta3=dB3-dA3; dc3+=dA3; b3+=+cf11*a3-cfR1*delta3; bb3+=+cf12*aa3-cfR2*delta3;
 			x++; if(w<=x) break;
 		}
 	}
@@ -443,7 +439,6 @@ void constant_time_spatial_gaussian_filter<1>::filter_y(int w,int h,double* src,
 	const int r=this->r;
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
-	const double norm=1.0/window_size();
 
 	std::vector<double> workspace(CH*w*(2*K+2)); // work space to keep raster scanning
 
@@ -477,7 +472,7 @@ void constant_time_spatial_gaussian_filter<1>::filter_y(int w,int h,double* src,
 		for(int cx=0;cx<CH*w;++cx)
 		{
 			double* ws=&workspace[cx*(2*K+2)];
-			q[cx]=norm*(ws[0]+ws[3]);
+			q[cx]=ws[0]+ws[3];
 			diff=p1S[cx]-p0N[cx];
 			ws[0]+=diff;
 			ws[1]=diff;
@@ -493,7 +488,7 @@ void constant_time_spatial_gaussian_filter<1>::filter_y(int w,int h,double* src,
 		for(int cx=0;cx<CH*w;++cx)
 		{
 			double* ws=&workspace[cx*(2*K+2)];
-			q[cx]=norm*(ws[0]+ws[2]);
+			q[cx]=ws[0]+ws[2];
 
 			diff=p1S[cx]-p0N[cx];
 			delta=diff-ws[1];
@@ -509,7 +504,7 @@ void constant_time_spatial_gaussian_filter<1>::filter_y(int w,int h,double* src,
 		for(int cx=0;cx<CH*w;++cx)
 		{
 			double* ws=&workspace[cx*(2*K+2)];
-			q[cx]=norm*(ws[0]+ws[3]);
+			q[cx]=ws[0]+ws[3];
 
 			diff=p1S[cx]-p0N[cx];
 			delta=diff-ws[1];
@@ -529,7 +524,6 @@ void constant_time_spatial_gaussian_filter<2>::filter_y(int w,int h,double* src,
 	const std::vector<double> table=this->table;
 	const double cf11=coef1[0], cfR1=coefR[0];
 	const double cf12=coef1[1], cfR2=coefR[1];
-	const double norm=1.0/window_size();
 
 	std::vector<double> workspace(CH*w*(2*K+2),0.0); // work space to keep raster scanning
 
@@ -565,7 +559,7 @@ void constant_time_spatial_gaussian_filter<2>::filter_y(int w,int h,double* src,
 		for(int cx=0;cx<CH*w;++cx)
 		{
 			double* ws=&workspace[cx*(2*K+2)];
-			q[cx]=norm*(ws[0]+ws[3]+ws[5]);
+			q[cx]=ws[0]+ws[3]+ws[5];
 			diff=p1S[cx]-p0N[cx];
 			ws[0]+=diff;
 			ws[1]=diff;
@@ -581,7 +575,7 @@ void constant_time_spatial_gaussian_filter<2>::filter_y(int w,int h,double* src,
 		for(int cx=0;cx<CH*w;++cx)
 		{
 			double* ws=&workspace[cx*(2*K+2)];
-			q[cx]=norm*(ws[0]+ws[2]+ws[4]);
+			q[cx]=ws[0]+ws[2]+ws[4];
 
 			diff=p1S[cx]-p0N[cx];
 			delta=diff-ws[1];
@@ -598,7 +592,7 @@ void constant_time_spatial_gaussian_filter<2>::filter_y(int w,int h,double* src,
 		for(int cx=0;cx<CH*w;++cx)
 		{
 			double* ws=&workspace[cx*(2*K+2)];
-			q[cx]=norm*(ws[0]+ws[3]+ws[5]);
+			q[cx]=ws[0]+ws[3]+ws[5];
 			
 			diff=p1S[cx]-p0N[cx];
 			delta=diff-ws[1];
@@ -682,11 +676,12 @@ public:
 		std::vector<double> tblC(tone);
 		std::vector<double> tblS(tone);
 		// component images
-		cv::Mat_<cv::Vec4d> comps0(src.size());
-		cv::Mat_<cv::Vec4d> comps(src.size());
+		cv::Mat_<cv::Vec4d> compsI(src.size());
+		cv::Mat_<cv::Vec4d> compsO(src.size());
 		
 		// DC component
-		cv::Mat_<double> denom(src.size(),1.0);
+		const int winsz=gaussian.window_size();
+		cv::Mat_<double> denom(src.size(),winsz*winsz);
 		cv::Mat_<double> numer(src.size());
 		gaussian.filter_xy(src,numer);
 
@@ -710,9 +705,9 @@ public:
 				int p=int(src(y,x)*(tone-1));
 				double cp=tblC[p];
 				double sp=tblS[p];
-				comps0(y,x)=cv::Vec4d(cp*src(y,x),sp*src(y,x),cp,sp);
+				compsI(y,x)=cv::Vec4d(cp*src(y,x),sp*src(y,x),cp,sp);
 			}
-			gaussian.filter_xy(comps0,comps);
+			gaussian.filter_xy(compsI,compsO);
 		
 			// decompressing k-th components
 			for(int y=0;y<src.rows;++y)
@@ -721,7 +716,7 @@ public:
 				int p=int(src(y,x)*(tone-1));
 				double cp=tblC[p];
 				double sp=tblS[p];
-				const cv::Vec4d& values=comps(y,x);
+				const cv::Vec4d& values=compsO(y,x);
 				numer(y,x)+=cp*values[0]+sp*values[1];
 				denom(y,x)+=cp*values[2]+sp*values[3];
 			}
