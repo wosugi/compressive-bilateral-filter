@@ -33,7 +33,7 @@ const double sigmaR=0.1;
 const double tau=0.1; // for compressive BF
 const int tone=(1<<8); // assuming 8-bits dynamic range, ie, [0,256).
 
-const bool sw_display_results=false;
+const bool sw_display_results=true;
 
 template<typename T>
 double calc_snr(const cv::Mat_<T>& image1,const cv::Mat_<T>& image2,T minval,T maxval)
@@ -106,10 +106,11 @@ int main(int argc,char** argv)
 
 	if(sw_display_results)
 	{
-		//cv::imwrite(pathO,dst1*(tone-1)); // dynamic range is transformed back to [0,tone)
+		//cv::imwrite("../test.png",dst1*(tone-1)); // dynamic range is transformed back to [0,tone)
 		//cv::imshow("src",image);
 		cv::imshow("dst0",dst0);
 		cv::imshow("dst1",dst1);
+	//	cv::imshow("error",(dst1-dst0)+0.5);
 		cv::waitKey();
 	}
 	return 0;
