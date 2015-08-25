@@ -610,28 +610,30 @@ void constant_time_spatial_gaussian_filter<2>::filter_y(int w,int h,double* src,
 class compressive_bilateral_filter
 {
 private:
+	int tone;
+
 	// this parameter will provide sufficient accuracy.
 	constant_time_spatial_gaussian_filter<1> gaussian;
-
-	int K;
-	double T;
+	int K; // number of basis range kernels
+	double T; // period length of periodic range kernel
 	std::vector<double> sqrta;
 
 public:
-	compressive_bilateral_filter(double sigmaS,double sigmaR,double tau):gaussian(sigmaS)
+	compressive_bilateral_filter(double sigmaS,double sigmaR,double tau=0.1,int tone=256):tone(tone),gaussian(sigmaS)
 	{
 		// estimating an optimal K
+		double s=sigmaR/(tone-1.0); // normalized as dynamic range [0,1]
 		double xi=boost::math::erfc_inv(tau*tau);
-		K=static_cast<int>(std::ceil(xi*xi/(2.0*M_PI)+xi/(2.0*M_PI*sigmaR)-0.5));
+		K=static_cast<int>(std::ceil(xi*xi/(2.0*M_PI)+xi/(2.0*M_PI*s)-0.5));
 		
 		// estimating an optimal T
 		// It is better to slightly extend the original search domain D
 		// because it might uncover the minimum of E(T) due to approximate error.
-		const double magicnum=0.03;
-		double t1=sigmaR*xi+1.0;
-		double t2=M_PI*sigmaR*(2*K+1)/xi+magicnum;
-		derivative_estimated_gaussian_range_kernel_error df(sigmaR,K);
-		T=solve_by_bs(df,t1,t2);
+		const double MAGICNUM=0.03;
+		double t1=s*xi+1.0;
+		double t2=M_PI*s*(2*K+1)/xi+MAGICNUM;
+		derivative_estimated_gaussian_range_kernel_error df(s,K);
+		T=(tone-1.0)*solve_by_bs(df,t1,t2);
 
 		// precomputing the square root of spectrum
 		double omega=2.0*M_PI/T;
@@ -647,7 +649,8 @@ private:
 	private:
 		double sigma,kappa;
 	public:
-		derivative_estimated_gaussian_range_kernel_error(double sigma,int K):sigma(sigma),kappa(M_PI*(2*K+1)){}
+		derivative_estimated_gaussian_range_kernel_error(double sigma,int K)
+			:sigma(sigma),kappa(M_PI*(2*K+1)){}
 	public:
 		double operator()(double T)
 		{
@@ -670,7 +673,7 @@ private:
 
 public:
 	/// dynamic range has to be [0,1].
-	void operator()(const cv::Mat_<double>& src,cv::Mat_<double>& dst,int tone=256)
+	void operator()(const cv::Mat_<double>& src,cv::Mat_<double>& dst)
 	{
 		// lookup tables (discretized for fast computation)
 		std::vector<double> tblC(tone);
@@ -690,19 +693,21 @@ public:
 		for(int k=1;k<=K;++k)
 		{
 			// preparing look-up tables
-			const double omegak=omega*k;
-			for(int p=0;p<tone;++p)
+			double omegak=omega*k;
+			for(int t=0;t<tone;++t)
 			{
-				double theta=omegak*p/double(tone-1);
-				tblC[p]=sqrta[k-1]*cos(theta);
-				tblS[p]=sqrta[k-1]*sin(theta);
+			//	double theta=omegak*t/double(tone-1);
+				double theta=omegak*t;
+				tblC[t]=sqrta[k-1]*cos(theta);
+				tblS[t]=sqrta[k-1]*sin(theta);
 			}
 
 			// generating k-th component images
 			for(int y=0;y<src.rows;++y)
 			for(int x=0;x<src.cols;++x)
 			{
-				int p=int(src(y,x)*(tone-1));
+			//	int p=int(src(y,x)*(tone-1));
+				int p=int(src(y,x));
 				double cp=tblC[p];
 				double sp=tblS[p];
 				compsI(y,x)=cv::Vec4d(cp*src(y,x),sp*src(y,x),cp,sp);
@@ -713,7 +718,8 @@ public:
 			for(int y=0;y<src.rows;++y)
 			for(int x=0;x<src.cols;++x)
 			{
-				int p=int(src(y,x)*(tone-1));
+			//	int p=int(src(y,x)*(tone-1));
+				int p=int(src(y,x));
 				double cp=tblC[p];
 				double sp=tblS[p];
 				const cv::Vec4d& values=compsO(y,x);
