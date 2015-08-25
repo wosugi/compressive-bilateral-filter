@@ -83,7 +83,7 @@ int main(int argc,char** argv)
 	cv::Mat_<double> dst0(image.size());
 	cv::Mat_<double> dst1(image.size());
 
-	std::cerr<<cv::format("[ss=%f sr=%f]",sigmaS,sigmaR)<<std::endl;
+	std::cerr<<cv::format("[sigmaS=%f sigmaR=%f]",sigmaS,sigmaR)<<std::endl;
 
 	cv::TickMeter tm;
 	

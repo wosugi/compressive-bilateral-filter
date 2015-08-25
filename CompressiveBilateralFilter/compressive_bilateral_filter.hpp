@@ -4,8 +4,8 @@
 // http://opensource.org/licenses/mit-license.php
 ////////////////////////////////////////////////////////////////////////////////
 
-//  This code is an implementation of the following two papers. Please cite 
-//  BOTH PAPERS in your paper if your research uses this code.
+//  This code is an implementation based on the following two papers. Please 
+//  cite BOTH PAPERS in your paper if your research uses this code.
 //    1. K. Sugimoto and S. Kamata: "Compressive bilateral filtering", IEEE 
 //       Trans. Image Process., vol. 24, no. 11, pp. 3357-3369 (Nov. 2015).
 //    2. K. Sugimoto and S. Kamata: "Efficient constant-time Gaussian filtering 
@@ -14,6 +14,7 @@
 
 #pragma once
 #define _USE_MATH_DEFINES
+//#define USE_BOOST
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
@@ -22,7 +23,9 @@
 #include <cmath>
 #include <cassert>
 #include <opencv2/opencv.hpp>
-#include <boost/math/special_functions/erf.hpp>
+#ifdef USE_BOOST
+#include <boost/math/special_functions/erf.hpp> // for erfc_inv() only
+#endif
 
 /// CB|ABCDE|DC (cv::BORDER_REFLECT_101)
 #define atW(x) (std::abs(x))
@@ -619,11 +622,21 @@ private:
 	std::vector<double> sqrta;
 
 public:
-	compressive_bilateral_filter(double sigmaS,double sigmaR,double tau=0.1,int tone=256):tone(tone),gaussian(sigmaS)
+	compressive_bilateral_filter(double sigmaS,double sigmaR,double tol=0.10,int tone=256):tone(tone),gaussian(sigmaS)
 	{
+#ifdef USE_BOOST
+		double xi=boost::math::erfc_inv(tol*tol);
+#else
+		// hard-coding for boost-less running
+		double xi;
+		     if(tol==0.05) xi=2.1378252338818511;
+		else if(tol==0.10) xi=1.8213863677184496;
+		else if(tol==0.20) xi=1.4522197815622468;
+		else
+			throw std::invalid_argument("Unsupported tolerance! ({0.05,0.10,0.20} only or use boost)");
+#endif
 		// estimating an optimal K
 		double s=sigmaR/(tone-1.0); // normalized as dynamic range [0,1]
-		double xi=boost::math::erfc_inv(tau*tau);
 		K=static_cast<int>(std::ceil(xi*xi/(2.0*M_PI)+xi/(2.0*M_PI*s)-0.5));
 		
 		// estimating an optimal T
@@ -696,7 +709,6 @@ public:
 			double omegak=omega*k;
 			for(int t=0;t<tone;++t)
 			{
-			//	double theta=omegak*t/double(tone-1);
 				double theta=omegak*t;
 				tblC[t]=sqrta[k-1]*cos(theta);
 				tblS[t]=sqrta[k-1]*sin(theta);
@@ -706,7 +718,6 @@ public:
 			for(int y=0;y<src.rows;++y)
 			for(int x=0;x<src.cols;++x)
 			{
-			//	int p=int(src(y,x)*(tone-1));
 				int p=int(src(y,x));
 				double cp=tblC[p];
 				double sp=tblS[p];
@@ -718,7 +729,6 @@ public:
 			for(int y=0;y<src.rows;++y)
 			for(int x=0;x<src.cols;++x)
 			{
-			//	int p=int(src(y,x)*(tone-1));
 				int p=int(src(y,x));
 				double cp=tblC[p];
 				double sp=tblS[p];
