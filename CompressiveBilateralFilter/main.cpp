@@ -34,29 +34,30 @@ const double sigmaS=2.0;
 const double sigmaR=0.1*255.0;
 const double tol=0.1; // for compressive BF
 
-const bool sw_display_results=true;
+const bool sw_imshow=true;
+//const bool sw_imwrite=false;
 
-template<typename T>
-double calc_snr(const cv::Mat_<T>& image1,const cv::Mat_<T>& image2,T minval,T maxval)
+double calc_snr(const cv::Mat& image1,const cv::Mat& image2,double minval,double maxval)
 {
 	assert(image1.size()==image2.size());
+	assert(image1.type()==image2.type());
 	
+	cv::Mat err;
+	cv::absdiff(image1,image2,err);
+	err.convertTo(err,CV_64F);
+	err=err.mul(err);
+	
+	cv::Scalar sums=cv::sum(err);
 	double sse=0.0;
-	for(int y=0;y<image1.rows;++y)
-	for(int x=0;x<image1.cols;++x)
-	{
-		T p=image1(y,x);
-		T q=image2(y,x);
-		p=(p<minval)?minval:(maxval<p)?maxval:p;
-		q=(q<minval)?minval:(maxval<q)?maxval:q;
-		sse+=(q-p)*(q-p);
-	}
+	for(int c=0;c<sums.channels;++c)
+		sse+=sums.val[c];
+
 	const double EPS=0.000001;
 	if(sse<=EPS)
 		return 0.0; // zero means the infinity
 
-	double mse=sse/(image1.cols*image1.rows);
-	double snr=-10.0*log10(mse/((maxval-minval)*(maxval-minval)));
+	double mse=sse/(image1.total()*image1.channels());
+	double snr=10.0*log10((maxval-minval)*(maxval-minval)/mse);
 	return snr;
 }
 
@@ -69,50 +70,84 @@ int main(int argc,char** argv)
 	}
 
 	const std::string& pathI(argv[1]);
-	cv::Mat image0=cv::imread(pathI,-1); // grayscale only
+	//const std::string& pathI("../lenna-gray.png"); // for debug
+	cv::Mat image0=cv::imread(pathI,-1);
 	if(image0.empty())
 	{
 		std::cerr<<"Input image loading failed!"<<std::endl;
 		return 1;
 	}
-	if(image0.channels()!=1)
-	{
-		std::cerr<<"Input image should be with 1 channel!"<<std::endl;
-		return 1;
-	}
 	
-	cv::Mat_<double> image=image0;
-	cv::Mat_<double> dst0(image.size());
-	cv::Mat_<double> dst1(image.size());
+	std::cerr<<"[Input Image]"<<std::endl;
+	std::cerr<<cv::format("\"%s\"  # (w,h,ch)=(%d,%d,%d)",pathI.c_str(),image0.cols,image0.rows,image0.channels())<<std::endl;
+	std::cerr<<"[Filter Parameters]"<<std::endl;
+	std::cerr<<cv::format("sigmaS=%f  sigmaR=%f  tol=%f",sigmaS,sigmaR,tol)<<std::endl;
+	
+	cv::Mat src;
+	image0.convertTo(src,CV_64F);
+	std::vector<cv::Mat_<double> > srcsp;
+	cv::split(src,srcsp);
 
-	std::cerr<<cv::format("[sigmaS=%f sigmaR=%f]",sigmaS,sigmaR)<<std::endl;
+	std::vector<cv::Mat_<double> > dstsp0(src.channels());
+	std::vector<cv::Mat_<double> > dstsp1(src.channels());
+	for(int c=0;c<int(src.channels());++c)
+	{
+		dstsp0[c]=cv::Mat_<double>(src.size());
+		dstsp1[c]=cv::Mat_<double>(src.size());
+	}
 
 	cv::TickMeter tm;
-	
+	// Original bilateral filtering
 	tm.start();
-	apply_bilateral_filter_original(image,dst0,sigmaS,sigmaR);
+	for(int c=0;c<int(src.channels());++c)
+		apply_bilateral_filter_original(srcsp[c],dstsp0[c],sigmaS,sigmaR);
 	tm.stop();
 	std::cerr<<cv::format("Original BF:     %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();
-
+	// Compressive bilateral filtering
 	tm.start();
 	compressive_bilateral_filter cbf(sigmaS,sigmaR,tol);
-	cbf(image,dst1);
+	for(int c=0;c<int(src.channels());++c)
+		cbf(srcsp[c],dstsp1[c]);
 	tm.stop();
 	std::cerr<<cv::format("Compressive BF:  %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();
+	
+	//// clipping for debug
+	//double minval=  0.0;
+	//double maxval=255.0;
+	//for(int c=0;c<int(src.channels());++c)
+	//{
+	//	for(int y=0;y<src.rows;++y)
+	//	for(int x=0;x<src.cols;++x)
+	//	{
+	//		double p0=dstsp0[c](y,x);
+	//		double p1=dstsp1[c](y,x);
+	//		dstsp0[c](y,x)=(p0<minval)?minval:(maxval<p0)?maxval:p0;
+	//		dstsp1[c](y,x)=(p1<minval)?minval:(maxval<p1)?maxval:p1;
+	//	}
+	//}
 
-	double snr=calc_snr<double>(dst0,dst1,0.0,255.0);
+	cv::Mat dst0,dst1;	
+	cv::merge(dstsp0,dst0);
+	cv::merge(dstsp1,dst1);
+
+	double snr=calc_snr(dst0,dst1,0.0,255.0);
 	std::cerr<<cv::format("SNR:  %f",snr)<<std::endl;
 	
-	if(sw_display_results)
+	if(sw_imshow)
 	{
-		//cv::imwrite("../test.png",dst1*255.0);
 		//cv::imshow("src",image);
 		cv::imshow("dst0",dst0/255.0);
 		cv::imshow("dst1",dst1/255.0);
-	//	cv::imshow("error",(dst1-dst0)/255.0+0.5);
+		//cv::imshow("error",(dst1-dst0)/255.0+0.5);
 		cv::waitKey();
 	}
+	//if(sw_imwrite)
+	//{
+	//	cv::imwrite("../dst0.png",dst0*255.0);
+	//	cv::imwrite("../dst1.png",dst1*255.0);
+	//	cv::imwrite("../error.png",(dst1-dst0)+128.0);
+	//}
 	return 0;
 }

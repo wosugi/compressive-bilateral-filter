@@ -34,7 +34,7 @@ private:
 	int tone;
 
 	// this parameter will provide sufficient accuracy.
-	o1_spatial_gaussian_filter<1> gaussian;
+	o1_spatial_gaussian_filter<2> gaussian;
 	int K; // number of basis range kernels
 	double T; // period length of periodic range kernel
 	std::vector<double> sqrta;
@@ -58,13 +58,13 @@ public:
 		K=static_cast<int>(std::ceil(xi*xi/(2.0*M_PI)+xi/(2.0*M_PI*s)-0.5));
 		
 		// estimating an optimal T
+		derivative_estimated_gaussian_range_kernel_error df(s,K);
+		double t1=s*xi+1.0;
+		double t2=M_PI*s*(2*K+1)/xi;
 		// It is better to slightly extend the original search domain D
 		// because it might uncover the minimum of E(T) due to approximate error.
 		const double MAGICNUM=0.03;
-		double t1=s*xi+1.0;
-		double t2=M_PI*s*(2*K+1)/xi+MAGICNUM;
-		derivative_estimated_gaussian_range_kernel_error df(s,K);
-		T=(tone-1.0)*solve_by_bs(df,t1,t2);
+		T=(tone-1.0)*solve_by_bs(df,t1,t2+MAGICNUM);
 
 		// precomputing the square root of spectrum
 		double omega=2.0*M_PI/T;
