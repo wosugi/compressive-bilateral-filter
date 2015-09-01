@@ -25,7 +25,7 @@ void apply_bilateral_filter_original(const cv::Mat_<double>& src,cv::Mat_<double
 	const int h=src.rows;
 
 	// generating spatial kernel
-	int r=int(ceil(3.0*sigmaS));
+	int r=int(ceil(4.0*sigmaS));
 	cv::Mat_<double> kernelS(1+r,1+r);
 	for(int v=0;v<=r;++v)
 	for(int u=0;u<=r;++u)

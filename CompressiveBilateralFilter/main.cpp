@@ -4,6 +4,8 @@
 // http://opensource.org/licenses/mit-license.php
 ////////////////////////////////////////////////////////////////////////////////
 #define _USE_MATH_DEFINES
+#define USE_OPENCV2
+//#define USE_BOOST
 #include <iostream>
 #include <algorithm>
 #include <string>
@@ -51,7 +53,7 @@ double calc_snr(const cv::Mat_<T>& image1,const cv::Mat_<T>& image2,T minval,T m
 	}
 	const double EPS=0.000001;
 	if(sse<=EPS)
-		return 0.0; //means the infinity
+		return 0.0; // zero means the infinity
 
 	double mse=sse/(image1.cols*image1.rows);
 	double snr=-10.0*log10(mse/((maxval-minval)*(maxval-minval)));
@@ -102,14 +104,14 @@ int main(int argc,char** argv)
 
 	double snr=calc_snr<double>(dst0,dst1,0.0,255.0);
 	std::cerr<<cv::format("SNR:  %f",snr)<<std::endl;
-
+	
 	if(sw_display_results)
 	{
 		//cv::imwrite("../test.png",dst1*255.0);
 		//cv::imshow("src",image);
 		cv::imshow("dst0",dst0/255.0);
 		cv::imshow("dst1",dst1/255.0);
-	//	cv::imshow("error",(dst1-dst0)+0.5);
+	//	cv::imshow("error",(dst1-dst0)/255.0+0.5);
 		cv::waitKey();
 	}
 	return 0;

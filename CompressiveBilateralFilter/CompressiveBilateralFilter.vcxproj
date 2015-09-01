@@ -73,6 +73,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="o1_spatial_gaussian_filter.hpp" />
     <ClInclude Include="original_bilateral_filter.hpp" />
     <ClInclude Include="compressive_bilateral_filter.hpp" />
   </ItemGroup>
