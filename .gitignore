@@ -39,3 +39,5 @@ ipch
 # Others
 others
 *.png
+*.mexw32
+*.mexw64
