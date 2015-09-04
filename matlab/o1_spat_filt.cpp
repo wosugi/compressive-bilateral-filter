@@ -16,7 +16,7 @@
 #include <stdexcept>
 #include "../CompressiveBilateralFilter/o1_spatial_gaussian_filter.hpp"
 
-const int K=1; // number of basis functions of spatial Gaussian kernel
+const int K=2; // number of basis functions of spatial Gaussian kernel
 
 // note that matlab images have been transposed in mex.
 void mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])

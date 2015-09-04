@@ -30,14 +30,15 @@
 #endif
 
 // parameters of BF algorithms (assuming 8-bits dynamic range)
+const double tone=256.0;
 const double sigmaS=2.0;
-const double sigmaR=0.1*255.0;
+const double sigmaR=0.1*(tone-1.0);
 const double tol=0.1; // for compressive BF
 
 const bool sw_imshow=true;
 //const bool sw_imwrite=false;
 
-double calc_snr(const cv::Mat& image1,const cv::Mat& image2,double minval,double maxval)
+double calc_psnr(const cv::Mat& image1,const cv::Mat& image2,double maxval)
 {
 	assert(image1.size()==image2.size());
 	assert(image1.type()==image2.type());
@@ -57,7 +58,7 @@ double calc_snr(const cv::Mat& image1,const cv::Mat& image2,double minval,double
 		return 0.0; // zero means the infinity
 
 	double mse=sse/(image1.total()*image1.channels());
-	double snr=10.0*log10((maxval-minval)*(maxval-minval)/mse);
+	double snr=10.0*log10(maxval*maxval/mse);
 	return snr;
 }
 
@@ -128,26 +129,26 @@ int main(int argc,char** argv)
 	//	}
 	//}
 
-	cv::Mat dst0,dst1;	
+	cv::Mat dst0,dst1;
 	cv::merge(dstsp0,dst0);
 	cv::merge(dstsp1,dst1);
 
-	double snr=calc_snr(dst0,dst1,0.0,255.0);
+	double snr=calc_psnr(dst0,dst1,tone-1.0);
 	std::cerr<<cv::format("SNR:  %f",snr)<<std::endl;
 	
 	if(sw_imshow)
 	{
 		//cv::imshow("src",image);
-		cv::imshow("dst0",dst0/255.0);
-		cv::imshow("dst1",dst1/255.0);
-		//cv::imshow("error",(dst1-dst0)/255.0+0.5);
+		cv::imshow("dst0",dst0/(tone-1.0));
+		cv::imshow("dst1",dst1/(tone-1.0));
+		//cv::imshow("error",(dst1-dst0)/(tone-1.0)+0.5);
 		cv::waitKey();
 	}
 	//if(sw_imwrite)
 	//{
-	//	cv::imwrite("../dst0.png",dst0*255.0);
-	//	cv::imwrite("../dst1.png",dst1*255.0);
-	//	cv::imwrite("../error.png",(dst1-dst0)+128.0);
+	//	cv::imwrite("../dst0.png",dst0*(tone-1.0));
+	//	cv::imwrite("../dst1.png",dst1*(tone-1.0));
+	//	cv::imwrite("../error.png",(dst1-dst0)+tone/2.0);
 	//}
 	return 0;
 }

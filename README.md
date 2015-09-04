@@ -53,14 +53,14 @@ Please change the filter parameter in the code directly if you try other paramet
 
 ## Matlab Version
 
-<u>Please note that the Matlab version might contain some bugs because its approximate accuracy is slightly lower than that of the C++ version.</u>
+*(Please note that the Matlab version might contain some bugs because its PSNR is about 2--4dB lower than that of the C++ version.)*
 
 ### Installation
 
-The Matlab version essentially requires no library. First, you have to generate an MEX file for the O(1) spatial filter by command `build_mex`.
+The Matlab version currently requires "Image Processing Toolbox", "Optimization Toolbox", and an MEX building environment. The O(1) spatial filter is provided as an MEX routine, which will be built during the first execution.
 
 ### Usage
 
-The program can run by command `main`. Please change the filter parameter in the code directly if you try other parameter values.
+The program can run by command `main`. The command will automatically try to generate the MEX routine if it is missing. Please change the filter parameter in the code directly if you use other parameter values.
 
 

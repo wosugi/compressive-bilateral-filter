@@ -54,13 +54,13 @@ public:
 			throw std::invalid_argument("Unsupported tolerance! ({0.05,0.10,0.20} only or use boost)");
 #endif
 		// estimating an optimal K
-		double s=sigmaR/(tone-1.0); // normalized as dynamic range [0,1]
+		double s=sigmaR/(tone-1.0); // normalized to dynamic range [0,1]
 		K=static_cast<int>(std::ceil(xi*xi/(2.0*M_PI)+xi/(2.0*M_PI*s)-0.5));
 		
 		// estimating an optimal T
 		derivative_estimated_gaussian_range_kernel_error df(s,K);
 		double t1=s*xi+1.0;
-		double t2=M_PI*s*(2*K+1)/xi;
+		double t2=M_PI*(2*K+1)*s/xi;
 		// It is better to slightly extend the original search domain D
 		// because it might uncover the minimum of E(T) due to approximate error.
 		const double MAGICNUM=0.03;

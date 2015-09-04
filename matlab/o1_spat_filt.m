@@ -1,5 +1,5 @@
-function dst = o1filter(src,sigmaS)
-% o1filter	O(1) spatial filter
+function dst = o1_spat_filt(src,sigmaS)
+% o1_spat_filt	O(1) spatial filter
 %	src    : Source image
 %	sigmaS : Scale of Gaussian spatial kernel
 %

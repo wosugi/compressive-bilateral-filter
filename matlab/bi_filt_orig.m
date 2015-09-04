@@ -1,12 +1,12 @@
-function dst = bf(src,sigmaS,sigmaR)
-% bf	Original bilateral filter
-%	src    : Source image (with dynamic range [0,1])
+function dst = bi_filt_orig(src,sigmaS,sigmaR)
+% bi_filt_orig	Original bilateral filter
+%	src    : Source image
 %	sigmaS : Scale of Gaussian spatial kernel
 %	sigmaR : Scale of Gaussian range kernel
 
 	%% Generating Gaussian spatial kernel
-	R = ceil(4.0*sigmaS);
-	[u,v] = meshgrid(-R:+R,-R:+R);
+	winsz = ceil(4.0*sigmaS);
+	[u,v] = meshgrid(-winsz:+winsz,-winsz:+winsz);
 	kernelS = exp(-0.5*(u.^2+v.^2)/(sigmaS^2));
 
 	%% Filtering
@@ -15,8 +15,8 @@ function dst = bf(src,sigmaS,sigmaR)
 	wb = waitbar(0,'Original bilateral filtering ...');
 	for y = 1:h
 		for x = 1:w
- 			u1 = max(-R,1-x); u2 = min(+R,w-x);
- 			v1 = max(-R,1-y); v2 = min(+R,h-y);
+ 			u1 = max(-winsz,1-x); u2 = min(+winsz,w-x);
+ 			v1 = max(-winsz,1-y); v2 = min(+winsz,h-y);
  			
  			for c = 1:ch
  				numer = 0.0;
@@ -25,7 +25,7 @@ function dst = bf(src,sigmaS,sigmaR)
  					for u = u1:u2
  						dr = src(y+v,x+u,c)-src(y,x,c);
  						kernelR = exp(-0.5*(dr/sigmaR)^2);
- 						g = kernelS(v+R+1,u+R+1)*kernelR;
+ 						g = kernelS(v+winsz+1,u+winsz+1)*kernelR;
  						numer = numer+g*src(y+v,x+u,c);
  						denom = denom+g;
  					end
