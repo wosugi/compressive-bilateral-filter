@@ -107,15 +107,15 @@ int test_bilateral_filter(const std::string& pathS,double sigmaS,double sigmaR,d
 	cv::TickMeter tm;
 	// Original bilateral filtering
 	tm.start();
-	for(int c=0;c<int(src.channels());++c)
-		apply_bilateral_filter_original(srcsp[c],dstsp0[c],sigmaS,sigmaR);
+	for(int c=0;c<src.channels();++c)
+		apply_bilateral_filter(srcsp[c],dstsp0[c],sigmaS,sigmaR);
 	tm.stop();
 	std::cerr<<cv::format("Original BF:     %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();
 	// Compressive bilateral filtering
 	tm.start();
 	compressive_bilateral_filter cbf(sigmaS,sigmaR,tol);
-	for(int c=0;c<int(src.channels());++c)
+	for(int c=0;c<src.channels();++c)
 		cbf(srcsp[c],dstsp1[c]);
 	tm.stop();
 	std::cerr<<cv::format("Compressive BF:  %7.1f [ms]",tm.getTimeMilli())<<std::endl;
@@ -195,20 +195,18 @@ int test_crossjoint_bilateral_filter(const std::string& pathS,const std::string&
 	cv::TickMeter tm;
 	// Original cross/joint bilateral filtering
 	tm.start();
-	for(int c=0;c<int(src.channels());++c)
-		apply_crossjoint_bilateral_filter_original(srcsp[c],guidsp[c],dstsp0[c],sigmaS,sigmaR);
-		//apply_bilateral_filter_original(srcsp[c],dstsp0[c],sigmaS,sigmaR);
+	for(int c=0;c<src.channels();++c)
+		apply_crossjoint_bilateral_filter(srcsp[c],guidsp[c],dstsp0[c],sigmaS,sigmaR);
 	tm.stop();
-	std::cerr<<cv::format("Original BF:     %7.1f [ms]",tm.getTimeMilli())<<std::endl;
+	std::cerr<<cv::format("Original CJ-BF:     %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();
 	// Compressive cross/joint bilateral filtering
 	tm.start();
 	compressive_bilateral_filter cbf(sigmaS,sigmaR,tol);
-	for(int c=0;c<int(src.channels());++c)
-		cbf(srcsp[c],dstsp1[c]);
-		//cbf(srcsp[c],guidsp[c],dstsp1[c]);
+	for(int c=0;c<src.channels();++c)
+		cbf(srcsp[c],guidsp[c],dstsp1[c]);
 	tm.stop();
-	std::cerr<<cv::format("Compressive BF:  %7.1f [ms]",tm.getTimeMilli())<<std::endl;
+	std::cerr<<cv::format("Compressive CJ-BF:  %7.1f [ms]",tm.getTimeMilli())<<std::endl;
 	tm.reset();
 	
 	cv::Mat dst0,dst1;
@@ -245,14 +243,18 @@ int main(int argc,char** argv)
 	const double sigmaR=0.1*(tone-1.0);
 	const double tol=0.1; // for compressive BF
 	
+	// for debug
+	//test_bilateral_filter("../lenna.png",sigmaS,sigmaR,tol);
+	//test_crossjoint_bilateral_filter("../lenna.png","../lenna.png",sigmaS,sigmaR,tol);
+	//test_crossjoint_bilateral_filter("../flash0s.png","../flash1s.png",sigmaS,sigmaR,tol);
+	//return -1;
+
 	if(argc==2)
 	{
-		//test_bilateral_filter("../lenna-gray.png"); // for debug
 		test_bilateral_filter(argv[1],sigmaS,sigmaR,tol);
 	}
 	else if(argc==3)
 	{
-		//test_crossjoint_bilateral_filter("../flash0s.png","../flash1s.png",sigmaS,sigmaR,tol); // for debug
 		test_crossjoint_bilateral_filter(argv[1],argv[2],sigmaS,sigmaR,tol);
 	}
 	else

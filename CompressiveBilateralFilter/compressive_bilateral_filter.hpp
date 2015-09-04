@@ -104,9 +104,13 @@ private:
 
 public:
 #ifdef USE_OPENCV2
-	/// dynamic range has to be [0,1].
-	void operator()(const cv::Mat_<double>& src,cv::Mat_<double>& dst)
+	/// O(1) cross/joint bilateral filtering
+	/// "guide" has to have dynamic range [0,tone).
+	void operator()(const cv::Mat_<double>& src,const cv::Mat_<double>& guide,cv::Mat_<double>& dst)
 	{
+		assert(src.size()==guide.size());
+		assert(src.size()==dst.size());
+		
 		// lookup tables (discretized for fast computation)
 		std::vector<double> tblC(tone);
 		std::vector<double> tblS(tone);
@@ -137,10 +141,11 @@ public:
 			for(int y=0;y<src.rows;++y)
 			for(int x=0;x<src.cols;++x)
 			{
-				int p=int(src(y,x));
-				double cp=tblC[p];
-				double sp=tblS[p];
-				compsI(y,x)=cv::Vec4d(cp*src(y,x),sp*src(y,x),cp,sp);
+				int t=int(guide(y,x)); // from guide image
+				double c=tblC[t];
+				double s=tblS[t];
+				double p=src(y,x);
+				compsI(y,x)=cv::Vec4d(c*p,s*p,c,s);
 			}
 			gaussian.filter_xy(compsI,compsO);
 		
@@ -148,12 +153,70 @@ public:
 			for(int y=0;y<src.rows;++y)
 			for(int x=0;x<src.cols;++x)
 			{
-				int p=int(src(y,x));
-				double cp=tblC[p];
-				double sp=tblS[p];
+				int t=int(guide(y,x)); // from guide image
+				double c=tblC[t];
+				double s=tblS[t];
 				const cv::Vec4d& values=compsO(y,x);
-				numer(y,x)+=cp*values[0]+sp*values[1];
-				denom(y,x)+=cp*values[2]+sp*values[3];
+				numer(y,x)+=c*values[0]+s*values[1];
+				denom(y,x)+=c*values[2]+s*values[3];
+			}
+		}
+		dst=numer/denom;
+	}
+	/// O(1) bilateral filtering
+	/// "src" has to have dynamic range [0,tone).
+	void operator()(const cv::Mat_<double>& src,cv::Mat_<double>& dst)
+	{
+		assert(src.size()==dst.size());
+		
+		// lookup tables (discretized for fast computation)
+		std::vector<double> tblC(tone);
+		std::vector<double> tblS(tone);
+		// component images
+		cv::Mat_<cv::Vec4d> compsI(src.size());
+		cv::Mat_<cv::Vec4d> compsO(src.size());
+		
+		// DC component
+		const int winsz=gaussian.window_size();
+		cv::Mat_<double> denom(src.size(),winsz*winsz);
+		cv::Mat_<double> numer(src.size());
+		gaussian.filter_xy(src,numer);
+
+		// AC components
+		double omega=2.0*M_PI/T;
+		for(int k=1;k<=K;++k)
+		{
+			// preparing look-up tables
+			double omegak=omega*k;
+			for(int t=0;t<tone;++t)
+			{
+				double theta=omegak*t;
+				tblC[t]=sqrta[k-1]*cos(theta);
+				tblS[t]=sqrta[k-1]*sin(theta);
+			}
+
+			// generating k-th component images
+			for(int y=0;y<src.rows;++y)
+			for(int x=0;x<src.cols;++x)
+			{
+				int t=int(src(y,x));
+				double c=tblC[t];
+				double s=tblS[t];
+				double p=src(y,x);
+				compsI(y,x)=cv::Vec4d(c*p,s*p,c,s);
+			}
+			gaussian.filter_xy(compsI,compsO);
+		
+			// decompressing k-th components
+			for(int y=0;y<src.rows;++y)
+			for(int x=0;x<src.cols;++x)
+			{
+				int t=int(src(y,x));
+				double c=tblC[t];
+				double s=tblS[t];
+				const cv::Vec4d& values=compsO(y,x);
+				numer(y,x)+=c*values[0]+s*values[1];
+				denom(y,x)+=c*values[2]+s*values[3];
 			}
 		}
 		dst=numer/denom;
