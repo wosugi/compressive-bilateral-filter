@@ -74,9 +74,8 @@ private:
 	{
 	private:
 		double s;
-		int K;
 	public:
-		derivative_estimated_gaussian_spatial_kernel_error(double s,int K):s(s),K(K){}
+		derivative_estimated_gaussian_spatial_kernel_error(double s):s(s){}
 	public:
 		double operator()(int r)
 		{
@@ -94,11 +93,11 @@ private:
 			int x=(x1+x2)/2;
 			((0.0<df(x))?x2:x1)=x;
 		}
-		return (abs(df(x1))<=abs(df(x2)))?x1:x2;
+		return (std::abs(df(x1))<=std::abs(df(x2)))?x1:x2;
 	}
 	inline int estimate_optimal_radius(double sigma) const
 	{
-		derivative_estimated_gaussian_spatial_kernel_error df(sigma,K);
+		derivative_estimated_gaussian_spatial_kernel_error df(sigma);
 		int r=solve_by_bs(df,int(2.0*sigma),int(4.0*sigma));
 		return r;
 	}
